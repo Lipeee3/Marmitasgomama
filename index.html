@@ -912,9 +912,17 @@
           );
         }
 
-        // Event handlers
+        // Modifique a função que salva o formulário (o evento do botão salvar)
         $("#btnSalvar").click(function () {
           if (!validarFormulario()) return;
+
+          // Pega o valor do campo numeroNF
+          let numeroNF = $("#numeroNF").val();
+
+          // Verifica se já começa com "NF-", senão adiciona
+          if (!numeroNF.startsWith("NF-")) {
+            numeroNF = "NF-" + numeroNF;
+          }
 
           const novoRegistro = {
             idProduto: $("#idProduto").val(),
@@ -922,7 +930,7 @@
             valorUnitario: $("#valorUnitario").val(),
             quantidade: $("#quantidade").val(),
             cliente: $("#cliente").val(),
-            numeroNF: $("#numeroNF").val(),
+            numeroNF: numeroNF, // Usa o valor já formatado
             dataEmissao: $("#dataEmissao").val(),
           };
 
