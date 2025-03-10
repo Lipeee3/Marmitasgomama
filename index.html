@@ -447,721 +447,894 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-      // Banco de dados simulado usando localStorage
-      class Database {
-        constructor() {
-          this.dbName = "dashboardVendas";
-          this.init();
-        }
+          // Banco de dados simulado usando localStorage
+// Banco de dados simulado usando localStorage
+// Banco de dados aprimorado usando localStorage com verificação de integridade
+class Database {
+  constructor() {
+    this.dbName = "dashboardVendas";
+    this.backupKey = "dashboardVendas_backup";
+    this.init();
+  }
 
-        init() {
-          if (!localStorage.getItem(this.dbName)) {
+  init() {
+    try {
+      // Verifica se existe dados no localStorage
+      if (!localStorage.getItem(this.dbName)) {
+        localStorage.setItem(this.dbName, JSON.stringify([]));
+        // Cria backup inicial
+        localStorage.setItem(this.backupKey, JSON.stringify([]));
+      } else {
+        // Verifica integridade dos dados
+        const data = JSON.parse(localStorage.getItem(this.dbName));
+        if (!Array.isArray(data)) {
+          // Se os dados estiverem corrompidos, tenta restaurar do backup
+          console.warn("Dados corrompidos, tentando restaurar do backup...");
+          const backup = localStorage.getItem(this.backupKey);
+          if (backup) {
+            localStorage.setItem(this.dbName, backup);
+          } else {
+            // Se não houver backup, reinicia o banco de dados
             localStorage.setItem(this.dbName, JSON.stringify([]));
           }
         }
+      }
+    } catch (error) {
+      console.error("Erro ao inicializar o banco de dados:", error);
+      // Reinicia o banco de dados em caso de erro
+      localStorage.setItem(this.dbName, JSON.stringify([]));
+      localStorage.setItem(this.backupKey, JSON.stringify([]));
+    }
+  }
 
-        getAll() {
-          return JSON.parse(localStorage.getItem(this.dbName)) || [];
+  getAll() {
+    try {
+      return JSON.parse(localStorage.getItem(this.dbName)) || [];
+    } catch (error) {
+      console.error("Erro ao obter dados:", error);
+      return [];
+    }
+  }
+
+  add(item) {
+    try {
+      const data = this.getAll();
+      item.id = Date.now(); // ID único baseado no timestamp
+      data.push(item);
+      
+      this._saveData(data);
+      return item;
+    } catch (error) {
+      console.error("Erro ao adicionar item:", error);
+      return null;
+    }
+  }
+
+  update(id, newData) {
+    try {
+      const data = this.getAll();
+      const index = data.findIndex((item) => item.id === id);
+      if (index !== -1) {
+        data[index] = { ...data[index], ...newData };
+        this._saveData(data);
+        return data[index];
+      }
+      return null;
+    } catch (error) {
+      console.error("Erro ao atualizar item:", error);
+      return null;
+    }
+  }
+
+  delete(id) {
+    try {
+      const data = this.getAll();
+      const newData = data.filter((item) => item.id !== id);
+      this._saveData(newData);
+      return true;
+    } catch (error) {
+      console.error("Erro ao excluir item:", error);
+      return false;
+    }
+  }
+
+  clear() {
+    try {
+      this._saveData([]);
+      return true;
+    } catch (error) {
+      console.error("Erro ao limpar dados:", error);
+      return false;
+    }
+  }
+
+  // Método privado para salvar dados com backup
+  _saveData(data) {
+    try {
+      const jsonData = JSON.stringify(data);
+      
+      // Salva os dados principais
+      localStorage.setItem(this.dbName, jsonData);
+      
+      // Cria um backup dos dados
+      localStorage.setItem(this.backupKey, jsonData);
+      
+      // Força o salvamento síncrono no localStorage
+      localStorage.getItem(this.dbName);
+      
+      return true;
+    } catch (error) {
+      console.error("Erro ao salvar dados:", error);
+      return false;
+    }
+  }
+}
+
+// Inicializa a aplicação
+$(document).ready(function () {
+  const db = new Database();
+  let donutChart, lineChart;
+  let currentEditId = null;
+  let dadosFiltrados = [];
+  let termoPesquisa = "";
+
+  // Funções de formatação
+  function formatarData(dataISO) {
+    if (!dataISO) return "";
+    const data = new Date(dataISO);
+    return data.toLocaleDateString("pt-BR");
+  }
+
+  function formatarMoeda(valor) {
+    return valor.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  }
+
+  // Carrega dados na tabela
+  function carregarTabela(dados = null) {
+    const registros = dados || db.getAll();
+    dadosFiltrados = registros;
+
+    const tbody = $("#tabelaVendas tbody");
+    tbody.empty();
+
+    if (registros.length === 0) {
+      tbody.append(`
+          <tr>
+              <td colspan="9" class="text-center">Nenhum registro encontrado</td>
+          </tr>
+      `);
+      // Mesmo sem registros, precisamos atualizar KPIs e gráficos para ficarem vazios
+      atualizarKPIs([]);
+      atualizarGraficos([]);
+      atualizarFiltros([]);
+      return;
+    }
+
+    registros.forEach((registro) => {
+      const valorTotal = (
+        parseFloat(registro.valorUnitario) * parseInt(registro.quantidade)
+      ).toFixed(2);
+
+      // Prepara o HTML com destaque dos termos pesquisados
+      let idProdutoHTML = registro.idProduto;
+      let nomePratoHTML = registro.nomePrato || "";
+      let numeroNFHTML = registro.numeroNF;
+
+      if (termoPesquisa) {
+        const regex = new RegExp(termoPesquisa, "gi");
+
+        if (registro.idProduto.match(regex)) {
+          idProdutoHTML = registro.idProduto.replace(
+            regex,
+            (match) => `<span class="highlight">${match}</span>`
+          );
         }
 
-        add(item) {
-          const data = this.getAll();
-          item.id = Date.now(); // ID único baseado no timestamp
-          data.push(item);
-          localStorage.setItem(this.dbName, JSON.stringify(data));
-          return item;
+        if (registro.nomePrato && registro.nomePrato.match(regex)) {
+          nomePratoHTML = registro.nomePrato.replace(
+            regex,
+            (match) => `<span class="highlight">${match}</span>`
+          );
         }
 
-        update(id, newData) {
-          const data = this.getAll();
-          const index = data.findIndex((item) => item.id === id);
-          if (index !== -1) {
-            data[index] = { ...data[index], ...newData };
-            localStorage.setItem(this.dbName, JSON.stringify(data));
-            return data[index];
-          }
-          return null;
-        }
-
-        delete(id) {
-          const data = this.getAll();
-          const newData = data.filter((item) => item.id !== id);
-          localStorage.setItem(this.dbName, JSON.stringify(newData));
-          return true;
-        }
-
-        clear() {
-          localStorage.setItem(this.dbName, JSON.stringify([]));
-          return true;
+        if (registro.numeroNF.match(regex)) {
+          numeroNFHTML = registro.numeroNF.replace(
+            regex,
+            (match) => `<span class="highlight">${match}</span>`
+          );
         }
       }
 
-      // Inicializa a aplicação
-      $(document).ready(function () {
-        const db = new Database();
-        let donutChart, lineChart;
-        let currentEditId = null;
-        let dadosFiltrados = [];
-        let termoPesquisa = "";
+      tbody.append(`
+          <tr data-id="${registro.id}">
+              <td>${idProdutoHTML}</td>
+              <td>${nomePratoHTML}</td>
+              <td>${formatarMoeda(
+                parseFloat(registro.valorUnitario)
+              )}</td>
+              <td>${registro.quantidade}</td>
+              <td>${formatarMoeda(parseFloat(valorTotal))}</td>
+              <td>${registro.cliente}</td>
+              <td>${numeroNFHTML}</td>
+              <td>${formatarData(registro.dataEmissao)}</td>
+              <td>
+                  <button class="btn btn-sm btn-warning btn-editar" data-id="${
+                    registro.id
+                  }">
+                      <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-danger btn-excluir" data-id="${
+                    registro.id
+                  }">
+                      <i class="fas fa-trash"></i>
+                  </button>
+              </td>
+          </tr>
+      `);
+    });
 
-        // Funções de formatação
-        function formatarData(dataISO) {
-          if (!dataISO) return "";
-          const data = new Date(dataISO);
-          return data.toLocaleDateString("pt-BR");
-        }
+    atualizarKPIs(registros);
+    atualizarGraficos(registros);
+    atualizarFiltros(registros);
+  }
 
-        function formatarMoeda(valor) {
-          return valor.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-          });
-        }
+  // Atualiza os KPIs
+  function atualizarKPIs(dados) {
+    let totalVendas = 0;
+    let quantidadeTotal = 0;
 
-        // Carrega dados na tabela
-        function carregarTabela(dados = null) {
-          const registros = dados || db.getAll();
-          dadosFiltrados = registros;
+    dados.forEach((registro) => {
+      const valorTotal =
+        parseFloat(registro.valorUnitario) *
+        parseInt(registro.quantidade);
+      totalVendas += valorTotal;
+      quantidadeTotal += parseInt(registro.quantidade);
+    });
 
-          const tbody = $("#tabelaVendas tbody");
-          tbody.empty();
+    $("#kpiTotalVendas").text(formatarMoeda(totalVendas));
+    $("#kpiQuantidadeTotal").text(quantidadeTotal);
+  }
 
-          if (registros.length === 0) {
-            tbody.append(`
-                <tr>
-                    <td colspan="9" class="text-center">Nenhum registro encontrado</td>
-                </tr>
-            `);
-            return;
-          }
+  // Atualiza os gráficos
+  function atualizarGraficos(dados) {
+    // Gráfico de Rosca - Participação por Cliente
+    const clientesData = {};
+    dados.forEach((registro) => {
+      const valorTotal =
+        parseFloat(registro.valorUnitario) *
+        parseInt(registro.quantidade);
+      if (clientesData[registro.cliente]) {
+        clientesData[registro.cliente] += valorTotal;
+      } else {
+        clientesData[registro.cliente] = valorTotal;
+      }
+    });
 
-          registros.forEach((registro) => {
-            const valorTotal = (
-              parseFloat(registro.valorUnitario) * parseInt(registro.quantidade)
-            ).toFixed(2);
+    const clientesLabels = Object.keys(clientesData);
+    const clientesValues = Object.values(clientesData);
 
-            // Prepara o HTML com destaque dos termos pesquisados
-            let idProdutoHTML = registro.idProduto;
-            let nomePratoHTML = registro.nomePrato || "";
-            let numeroNFHTML = registro.numeroNF;
+    // Gera cores aleatórias para o gráfico
+    const backgroundColors = clientesLabels.map(() => {
+      const r = Math.floor(Math.random() * 255);
+      const g = Math.floor(Math.random() * 255);
+      const b = Math.floor(Math.random() * 255);
+      return `rgba(${r}, ${g}, ${b}, 0.7)`;
+    });
 
-            if (termoPesquisa) {
-              const regex = new RegExp(termoPesquisa, "gi");
+    // Gráfico de Evolução Mensal
+    const vendasPorMes = {
+      1: 0,
+      2: 0,
+      3: 0,
+      4: 0,
+      5: 0,
+      6: 0,
+      7: 0,
+      8: 0,
+      9: 0,
+      10: 0,
+      11: 0,
+      12: 0,
+    };
 
-              if (registro.idProduto.match(regex)) {
-                idProdutoHTML = registro.idProduto.replace(
-                  regex,
-                  (match) => `<span class="highlight">${match}</span>`
-                );
-              }
+    dados.forEach((registro) => {
+      if (registro.dataEmissao) {
+        const data = new Date(registro.dataEmissao);
+        const mes = data.getMonth() + 1;
+        const valorTotal =
+          parseFloat(registro.valorUnitario) *
+          parseInt(registro.quantidade);
+        vendasPorMes[mes] += valorTotal;
+      }
+    });
 
-              if (registro.nomePrato && registro.nomePrato.match(regex)) {
-                nomePratoHTML = registro.nomePrato.replace(
-                  regex,
-                  (match) => `<span class="highlight">${match}</span>`
-                );
-              }
+    const mesesLabels = [
+      "Janeiro",
+      "Fevereiro",
+      "Março",
+      "Abril",
+      "Maio",
+      "Junho",
+      "Julho",
+      "Agosto",
+      "Setembro",
+      "Outubro",
+      "Novembro",
+      "Dezembro",
+    ];
+    const vendasValues = Object.values(vendasPorMes);
 
-              if (registro.numeroNF.match(regex)) {
-                numeroNFHTML = registro.numeroNF.replace(
-                  regex,
-                  (match) => `<span class="highlight">${match}</span>`
-                );
-              }
-            }
-
-            tbody.append(`
-                <tr data-id="${registro.id}">
-                    <td>${idProdutoHTML}</td>
-                    <td>${nomePratoHTML}</td>
-                    <td>${formatarMoeda(
-                      parseFloat(registro.valorUnitario)
-                    )}</td>
-                    <td>${registro.quantidade}</td>
-                    <td>${formatarMoeda(parseFloat(valorTotal))}</td>
-                    <td>${registro.cliente}</td>
-                    <td>${numeroNFHTML}</td>
-                    <td>${formatarData(registro.dataEmissao)}</td>
-                    <td>
-                        <button class="btn btn-sm btn-warning btn-editar" data-id="${
-                          registro.id
-                        }">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger btn-excluir" data-id="${
-                          registro.id
-                        }">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `);
-          });
-
-          atualizarKPIs(registros);
-          atualizarGraficos(registros);
-          atualizarFiltros(registros);
-        }
-
-        // Atualiza os KPIs
-        function atualizarKPIs(dados) {
-          let totalVendas = 0;
-          let quantidadeTotal = 0;
-
-          dados.forEach((registro) => {
-            const valorTotal =
-              parseFloat(registro.valorUnitario) *
-              parseInt(registro.quantidade);
-            totalVendas += valorTotal;
-            quantidadeTotal += parseInt(registro.quantidade);
-          });
-
-          $("#kpiTotalVendas").text(formatarMoeda(totalVendas));
-          $("#kpiQuantidadeTotal").text(quantidadeTotal);
-        }
-
-        // Atualiza os gráficos
-        function atualizarGraficos(dados) {
-          // Gráfico de Rosca - Participação por Cliente
-          const clientesData = {};
-          dados.forEach((registro) => {
-            const valorTotal =
-              parseFloat(registro.valorUnitario) *
-              parseInt(registro.quantidade);
-            if (clientesData[registro.cliente]) {
-              clientesData[registro.cliente] += valorTotal;
-            } else {
-              clientesData[registro.cliente] = valorTotal;
-            }
-          });
-
-          const clientesLabels = Object.keys(clientesData);
-          const clientesValues = Object.values(clientesData);
-
-          // Gera cores aleatórias para o gráfico
-          const backgroundColors = clientesLabels.map(() => {
-            const r = Math.floor(Math.random() * 255);
-            const g = Math.floor(Math.random() * 255);
-            const b = Math.floor(Math.random() * 255);
-            return `rgba(${r}, ${g}, ${b}, 0.7)`;
-          });
-
-          // Gráfico de Evolução Mensal
-          const vendasPorMes = {
-            1: 0,
-            2: 0,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0,
-            7: 0,
-            8: 0,
-            9: 0,
-            10: 0,
-            11: 0,
-            12: 0,
-          };
-
-          dados.forEach((registro) => {
-            if (registro.dataEmissao) {
-              const data = new Date(registro.dataEmissao);
-              const mes = data.getMonth() + 1;
-              const valorTotal =
-                parseFloat(registro.valorUnitario) *
-                parseInt(registro.quantidade);
-              vendasPorMes[mes] += valorTotal;
-            }
-          });
-
-          const mesesLabels = [
-            "Janeiro",
-            "Fevereiro",
-            "Março",
-            "Abril",
-            "Maio",
-            "Junho",
-            "Julho",
-            "Agosto",
-            "Setembro",
-            "Outubro",
-            "Novembro",
-            "Dezembro",
-          ];
-          const vendasValues = Object.values(vendasPorMes);
-
-          // Atualiza ou cria o gráfico de rosca
-          if (donutChart) {
-            donutChart.data.labels = clientesLabels;
-            donutChart.data.datasets[0].data = clientesValues;
-            donutChart.data.datasets[0].backgroundColor = backgroundColors;
-            donutChart.update();
-          } else {
-            const ctxDonut = document
-              .getElementById("donutChart")
-              .getContext("2d");
-            donutChart = new Chart(ctxDonut, {
-              type: "doughnut",
-              data: {
-                labels: clientesLabels,
-                datasets: [
-                  {
-                    data: clientesValues,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 1,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: "right",
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        const value = context.raw;
-                        const total = context.dataset.data.reduce(
-                          (a, b) => a + b,
-                          0
-                        );
-                        const percentage = Math.round((value / total) * 100);
-                        return `${context.label}: ${formatarMoeda(
-                          value
-                        )} (${percentage}%)`;
-                      },
-                    },
-                  },
-                },
-                onClick: function (event, elements) {
-                  if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const cliente = clientesLabels[index];
-                    $("#filtroCliente").val(cliente);
-                    aplicarFiltros();
-                  }
+    // Atualiza ou cria o gráfico de rosca
+    if (donutChart) {
+      // Destruir e recriar o gráfico para evitar problemas com dados persistentes
+      donutChart.destroy();
+      const ctxDonut = document
+        .getElementById("donutChart")
+        .getContext("2d");
+      donutChart = new Chart(ctxDonut, {
+        type: "doughnut",
+        data: {
+          labels: clientesLabels,
+          datasets: [
+            {
+              data: clientesValues,
+              backgroundColor: backgroundColors,
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const value = context.raw;
+                  const total = context.dataset.data.reduce(
+                    (a, b) => a + b,
+                    0
+                  );
+                  const percentage = Math.round((value / total) * 100);
+                  return `${context.label}: ${formatarMoeda(
+                    value
+                  )} (${percentage}%)`;
                 },
               },
-            });
-          }
-
-          // Atualiza ou cria o gráfico de linha
-          if (lineChart) {
-            lineChart.data.labels = mesesLabels;
-            lineChart.data.datasets[0].data = vendasValues;
-            lineChart.update();
-          } else {
-            const ctxLine = document
-              .getElementById("lineChart")
-              .getContext("2d");
-            lineChart = new Chart(ctxLine, {
-              type: "line",
-              data: {
-                labels: mesesLabels,
-                datasets: [
-                  {
-                    label: "Vendas Mensais",
-                    data: vendasValues,
-                    backgroundColor: "rgba(54, 162, 235, 0.2)",
-                    borderColor: "rgba(54, 162, 235, 1)",
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      callback: function (value) {
-                        return formatarMoeda(value);
-                      },
-                    },
-                  },
-                },
-                plugins: {
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        return `Vendas: ${formatarMoeda(context.raw)}`;
-                      },
-                    },
-                  },
-                },
-              },
-            });
-          }
-        }
-
-        // Atualiza os filtros
-        function atualizarFiltros(dados) {
-          // Obtém valores únicos para cada filtro
-          const anos = [
-            ...new Set(
-              dados
-                .map((item) => {
-                  return item.dataEmissao
-                    ? new Date(item.dataEmissao).getFullYear()
-                    : null;
-                })
-                .filter(Boolean)
-            ),
-          ];
-
-          const clientes = [...new Set(dados.map((item) => item.cliente))];
-          const produtos = [...new Set(dados.map((item) => item.idProduto))];
-
-          // Limpa e recria as opções dos filtros
-          const filtroAno = $("#filtroAno");
-          const filtroCliente = $("#filtroCliente");
-          const filtroProduto = $("#filtroProduto");
-
-          // Preserva a opção "Todos"
-          const anoSelecionado = filtroAno.val();
-          const clienteSelecionado = filtroCliente.val();
-          const produtoSelecionado = filtroProduto.val();
-
-          filtroAno.html('<option value="">Todos</option>');
-          filtroCliente.html('<option value="">Todos</option>');
-          filtroProduto.html('<option value="">Todos</option>');
-
-          // Adiciona as opções
-          anos
-            .sort((a, b) => b - a)
-            .forEach((ano) => {
-              filtroAno.append(`<option value="${ano}">${ano}</option>`);
-            });
-
-          clientes.sort().forEach((cliente) => {
-            filtroCliente.append(
-              `<option value="${cliente}">${cliente}</option>`
-            );
-          });
-
-          produtos.sort().forEach((produto) => {
-            filtroProduto.append(
-              `<option value="${produto}">${produto}</option>`
-            );
-          });
-
-          // Restaura a seleção anterior
-          filtroAno.val(anoSelecionado);
-          filtroCliente.val(clienteSelecionado);
-          filtroProduto.val(produtoSelecionado);
-        }
-
-        // Aplica os filtros
-        function aplicarFiltros() {
-          const anoSelecionado = $("#filtroAno").val();
-          const mesSelecionado = $("#filtroMes").val();
-          const clienteSelecionado = $("#filtroCliente").val();
-          const produtoSelecionado = $("#filtroProduto").val();
-
-          let dados = db.getAll();
-
-          if (anoSelecionado) {
-            dados = dados.filter((item) => {
-              const data = new Date(item.dataEmissao);
-              return data.getFullYear() == anoSelecionado;
-            });
-          }
-
-          if (mesSelecionado) {
-            dados = dados.filter((item) => {
-              const data = new Date(item.dataEmissao);
-              return data.getMonth() + 1 == mesSelecionado;
-            });
-          }
-
-          if (clienteSelecionado) {
-            dados = dados.filter((item) => item.cliente === clienteSelecionado);
-          }
-
-          if (produtoSelecionado) {
-            dados = dados.filter(
-              (item) => item.idProduto === produtoSelecionado
-            );
-          }
-
-          // Aplica a pesquisa textual, se houver
-          if (termoPesquisa) {
-            dados = filtrarPorPesquisa(dados, termoPesquisa);
-          }
-
-          carregarTabela(dados);
-        }
-
-        // Função de pesquisa textual
-        function filtrarPorPesquisa(dados, termo) {
-          if (!termo) return dados;
-
-          const termoLowerCase = termo.toLowerCase();
-          return dados.filter(
-            (item) =>
-              (item.numeroNF &&
-                item.numeroNF.toLowerCase().includes(termoLowerCase)) ||
-              (item.idProduto &&
-                item.idProduto.toLowerCase().includes(termoLowerCase)) ||
-              (item.nomePrato &&
-                item.nomePrato.toLowerCase().includes(termoLowerCase))
-          );
-        }
-
-        // Modifique a função que salva o formulário (o evento do botão salvar)
-        $("#btnSalvar").click(function () {
-          if (!validarFormulario()) return;
-
-          // Pega o valor do campo numeroNF
-          let numeroNF = $("#numeroNF").val();
-
-          // Verifica se já começa com "NF-", senão adiciona
-          if (!numeroNF.startsWith("NF-")) {
-            numeroNF = "NF-" + numeroNF;
-          }
-
-          const novoRegistro = {
-            idProduto: $("#idProduto").val(),
-            nomePrato: $("#nomePrato").val(),
-            valorUnitario: $("#valorUnitario").val(),
-            quantidade: $("#quantidade").val(),
-            cliente: $("#cliente").val(),
-            numeroNF: numeroNF, // Usa o valor já formatado
-            dataEmissao: $("#dataEmissao").val(),
-          };
-
-          if (currentEditId) {
-            db.update(currentEditId, novoRegistro);
-          } else {
-            db.add(novoRegistro);
-          }
-
-          $("#cadastroModal").modal("hide");
-          limparFormulario();
-          carregarTabela();
-        });
-
-        // Validação do formulário
-        function validarFormulario() {
-          const campos = [
-            "idProduto",
-            "nomePrato",
-            "valorUnitario",
-            "quantidade",
-            "cliente",
-            "numeroNF",
-            "dataEmissao",
-          ];
-          let valido = true;
-
-          campos.forEach((campo) => {
-            const valor = $(`#${campo}`).val();
-            if (!valor) {
-              $(`#${campo}`).addClass("is-invalid");
-              valido = false;
-            } else {
-              $(`#${campo}`).removeClass("is-invalid");
+            },
+          },
+          onClick: function (event, elements) {
+            if (elements.length > 0) {
+              const index = elements[0].index;
+              const cliente = clientesLabels[index];
+              $("#filtroCliente").val(cliente);
+              aplicarFiltros();
             }
-          });
-
-          return valido;
-        }
-
-        // Limpar formulário
-        function limparFormulario() {
-          $("#formCadastro")[0].reset();
-          $("#editId").val("");
-          currentEditId = null;
-        }
-
-        // Botão editar
-        $(document).on("click", ".btn-editar", function () {
-          const id = parseInt($(this).data("id"));
-          const registro = db.getAll().find((item) => item.id === id);
-
-          if (registro) {
-            $("#idProduto").val(registro.idProduto);
-            $("#nomePrato").val(registro.nomePrato);
-            $("#valorUnitario").val(registro.valorUnitario);
-            $("#quantidade").val(registro.quantidade);
-            $("#cliente").val(registro.cliente);
-            $("#numeroNF").val(registro.numeroNF);
-            $("#dataEmissao").val(registro.dataEmissao);
-            $("#editId").val(registro.id);
-            currentEditId = registro.id;
-
-            $("#cadastroModalLabel").text("Editar Registro");
-            $("#cadastroModal").modal("show");
-          }
-        });
-
-        // Botão excluir
-        $(document).on("click", ".btn-excluir", function () {
-          const id = parseInt($(this).data("id"));
-          $("#confirmacaoTexto").html(
-            "Tem certeza que deseja excluir este registro?"
-          );
-
-          $("#btnConfirmar")
-            .off()
-            .on("click", function () {
-              db.delete(id);
-              $("#confirmacaoModal").modal("hide");
-              carregarTabela();
-            });
-
-          $("#confirmacaoModal").modal("show");
-        });
-
-        // Botão limpar tabela
-        $("#btnLimparTabela").click(function () {
-          $("#confirmacaoTexto").html(
-            "Tem certeza que deseja limpar todos os registros? Esta ação não pode ser desfeita."
-          );
-
-          $("#btnConfirmar")
-            .off()
-            .on("click", function () {
-              db.clear();
-              $("#confirmacaoModal").modal("hide");
-              carregarTabela();
-            });
-
-          $("#confirmacaoModal").modal("show");
-        });
-
-        // Exportar para Excel
-        $("#btnExportar").click(function () {
-          if (dadosFiltrados.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-          }
-
-          const ws = XLSX.utils.json_to_sheet(
-            dadosFiltrados.map((item) => {
-              const valorTotal =
-                parseFloat(item.valorUnitario) * parseInt(item.quantidade);
-              return {
-                "ID Produto": item.idProduto,
-                "Nome do Prato": item.nomePrato,
-                "Valor Unitário": parseFloat(item.valorUnitario),
-                Quantidade: parseInt(item.quantidade),
-                "Valor Total": valorTotal,
-                Cliente: item.cliente,
-                "Número NF": item.numeroNF,
-                "Data Emissão": formatarData(item.dataEmissao),
-              };
-            })
-          );
-
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "Vendas");
-
-          const fileName = `Dashboard_Vendas_${
-            new Date().toISOString().split("T")[0]
-          }.xlsx`;
-          XLSX.writeFile(wb, fileName);
-        });
-
-        // Pesquisa
-        $("#barraPesquisa").on("input", function () {
-          termoPesquisa = $(this).val().trim();
-
-          if (termoPesquisa.length > 0) {
-            $("#limparPesquisa").show();
-          } else {
-            $("#limparPesquisa").hide();
-          }
-
-          aplicarFiltros();
-        });
-
-        $("#limparPesquisa").click(function () {
-          $("#barraPesquisa").val("");
-          termoPesquisa = "";
-          $(this).hide();
-          aplicarFiltros();
-        });
-
-        // Filtros
-        $("#filtroAno, #filtroMes, #filtroCliente, #filtroProduto").change(
-          function () {
-            aplicarFiltros();
-          }
-        );
-
-        // Carrega dados iniciais
-        carregarTabela();
-
-        // Esconde o loading após carregar
-        setTimeout(function () {
-          $(".loading").fadeOut();
-        }, 500);
-
-        // Adiciona dados de exemplo se o banco de dados estiver vazio
-        if (db.getAll().length === 0) {
-          const dadosExemplo = [
-            {
-              idProduto: "P001",
-              nomePrato: "Feijoada Completa",
-              valorUnitario: "45.90",
-              quantidade: "12",
-              cliente: "Restaurante Silva",
-              numeroNF: "NF-001",
-              dataEmissao: "2023-01-15",
-            },
-            {
-              idProduto: "P002",
-              nomePrato: "Picanha ao Ponto",
-              valorUnitario: "69.90",
-              quantidade: "8",
-              cliente: "Churrascaria Gaúcha",
-              numeroNF: "NF-002",
-              dataEmissao: "2023-01-20",
-            },
-            {
-              idProduto: "P003",
-              nomePrato: "Macarronada Italiana",
-              valorUnitario: "38.50",
-              quantidade: "15",
-              cliente: "Cantina Don Pietro",
-              numeroNF: "NF-003",
-              dataEmissao: "2023-02-05",
-            },
-            {
-              idProduto: "P001",
-              nomePrato: "Feijoada Completa",
-              valorUnitario: "45.90",
-              quantidade: "10",
-              cliente: "Restaurante Silva",
-              numeroNF: "NF-004",
-              dataEmissao: "2023-02-18",
-            },
-            {
-              idProduto: "P004",
-              nomePrato: "Risoto de Camarão",
-              valorUnitario: "58.90",
-              quantidade: "6",
-              cliente: "Restaurante Mar & Terra",
-              numeroNF: "NF-005",
-              dataEmissao: "2023-03-10",
-            },
-          ];
-
-          dadosExemplo.forEach((item) => db.add(item));
-          carregarTabela();
-        }
-
-        // Limpa o modal quando é fechado
-        $("#cadastroModal").on("hidden.bs.modal", function () {
-          limparFormulario();
-          $("#cadastroModalLabel").text("Novo Registro");
-        });
+          },
+        },
       });
+    } else {
+      const ctxDonut = document
+        .getElementById("donutChart")
+        .getContext("2d");
+      donutChart = new Chart(ctxDonut, {
+        type: "doughnut",
+        data: {
+          labels: clientesLabels,
+          datasets: [
+            {
+              data: clientesValues,
+              backgroundColor: backgroundColors,
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "right",
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  const value = context.raw;
+                  const total = context.dataset.data.reduce(
+                    (a, b) => a + b,
+                    0
+                  );
+                  const percentage = Math.round((value / total) * 100);
+                  return `${context.label}: ${formatarMoeda(
+                    value
+                  )} (${percentage}%)`;
+                },
+              },
+            },
+          },
+          onClick: function (event, elements) {
+            if (elements.length > 0) {
+              const index = elements[0].index;
+              const cliente = clientesLabels[index];
+              $("#filtroCliente").val(cliente);
+              aplicarFiltros();
+            }
+          },
+        },
+      });
+    }
+
+    // Atualiza ou cria o gráfico de linha
+    if (lineChart) {
+      // Destruir e recriar o gráfico para evitar problemas com dados persistentes
+      lineChart.destroy();
+      const ctxLine = document
+        .getElementById("lineChart")
+        .getContext("2d");
+      lineChart = new Chart(ctxLine, {
+        type: "line",
+        data: {
+          labels: mesesLabels,
+          datasets: [
+            {
+              label: "Vendas Mensais",
+              data: vendasValues,
+              backgroundColor: "rgba(54, 162, 235, 0.2)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (value) {
+                  return formatarMoeda(value);
+                },
+              },
+            },
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `Vendas: ${formatarMoeda(context.raw)}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    } else {
+      const ctxLine = document
+        .getElementById("lineChart")
+        .getContext("2d");
+      lineChart = new Chart(ctxLine, {
+        type: "line",
+        data: {
+          labels: mesesLabels,
+          datasets: [
+            {
+              label: "Vendas Mensais",
+              data: vendasValues,
+              backgroundColor: "rgba(54, 162, 235, 0.2)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              borderWidth: 2,
+              tension: 0.3,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function (value) {
+                  return formatarMoeda(value);
+                },
+              },
+            },
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `Vendas: ${formatarMoeda(context.raw)}`;
+                },
+              },
+            },
+          },
+        },
+      });
+    }
+  }
+
+  // Atualiza os filtros
+  function atualizarFiltros(dados) {
+    // Obtém valores únicos para cada filtro
+    const anos = [
+      ...new Set(
+        dados
+          .map((item) => {
+            return item.dataEmissao
+              ? new Date(item.dataEmissao).getFullYear()
+              : null;
+          })
+          .filter(Boolean)
+      ),
+    ];
+
+    const clientes = [...new Set(dados.map((item) => item.cliente))];
+    const produtos = [...new Set(dados.map((item) => item.idProduto))];
+
+    // Limpa e recria as opções dos filtros
+    const filtroAno = $("#filtroAno");
+    const filtroCliente = $("#filtroCliente");
+    const filtroProduto = $("#filtroProduto");
+
+    // Preserva a opção "Todos"
+    const anoSelecionado = filtroAno.val();
+    const clienteSelecionado = filtroCliente.val();
+    const produtoSelecionado = filtroProduto.val();
+
+    filtroAno.html('<option value="">Todos</option>');
+    filtroCliente.html('<option value="">Todos</option>');
+    filtroProduto.html('<option value="">Todos</option>');
+
+    // Adiciona as opções
+    anos
+      .sort((a, b) => b - a)
+      .forEach((ano) => {
+        filtroAno.append(`<option value="${ano}">${ano}</option>`);
+      });
+
+    clientes.sort().forEach((cliente) => {
+      filtroCliente.append(
+        `<option value="${cliente}">${cliente}</option>`
+      );
+    });
+
+    produtos.sort().forEach((produto) => {
+      filtroProduto.append(
+        `<option value="${produto}">${produto}</option>`
+      );
+    });
+
+    // Restaura a seleção anterior se o valor ainda existir nas opções disponíveis
+    if (anoSelecionado && anos.includes(parseInt(anoSelecionado))) {
+      filtroAno.val(anoSelecionado);
+    } else {
+      filtroAno.val("");
+    }
+
+    if (clienteSelecionado && clientes.includes(clienteSelecionado)) {
+      filtroCliente.val(clienteSelecionado);
+    } else {
+      filtroCliente.val("");
+    }
+
+    if (produtoSelecionado && produtos.includes(produtoSelecionado)) {
+      filtroProduto.val(produtoSelecionado);
+    } else {
+      filtroProduto.val("");
+    }
+  }
+
+  // Aplica os filtros
+  function aplicarFiltros() {
+    const anoSelecionado = $("#filtroAno").val();
+    const mesSelecionado = $("#filtroMes").val();
+    const clienteSelecionado = $("#filtroCliente").val();
+    const produtoSelecionado = $("#filtroProduto").val();
+
+    let dados = db.getAll();
+
+    if (anoSelecionado) {
+      dados = dados.filter((item) => {
+        const data = new Date(item.dataEmissao);
+        return data.getFullYear() == anoSelecionado;
+      });
+    }
+
+    if (mesSelecionado) {
+      dados = dados.filter((item) => {
+        const data = new Date(item.dataEmissao);
+        return data.getMonth() + 1 == mesSelecionado;
+      });
+    }
+
+    if (clienteSelecionado) {
+      dados = dados.filter((item) => item.cliente === clienteSelecionado);
+    }
+
+    if (produtoSelecionado) {
+      dados = dados.filter(
+        (item) => item.idProduto === produtoSelecionado
+      );
+    }
+
+    // Aplica a pesquisa textual, se houver
+    if (termoPesquisa) {
+      dados = filtrarPorPesquisa(dados, termoPesquisa);
+    }
+
+    carregarTabela(dados);
+  }
+
+  // Função de pesquisa textual
+  function filtrarPorPesquisa(dados, termo) {
+    if (!termo) return dados;
+
+    const termoLowerCase = termo.toLowerCase();
+    return dados.filter(
+      (item) =>
+        (item.numeroNF &&
+          item.numeroNF.toLowerCase().includes(termoLowerCase)) ||
+        (item.idProduto &&
+          item.idProduto.toLowerCase().includes(termoLowerCase)) ||
+        (item.nomePrato &&
+          item.nomePrato.toLowerCase().includes(termoLowerCase))
+    );
+  }
+
+  // Modifique a função que salva o formulário (o evento do botão salvar)
+  $("#btnSalvar").click(function () {
+    if (!validarFormulario()) return;
+
+    // Pega o valor do campo numeroNF
+    let numeroNF = $("#numeroNF").val();
+
+    // Verifica se já começa com "NF-", senão adiciona
+    if (!numeroNF.startsWith("NF-")) {
+      numeroNF = "NF-" + numeroNF;
+    }
+
+    const novoRegistro = {
+      idProduto: $("#idProduto").val(),
+      nomePrato: $("#nomePrato").val(),
+      valorUnitario: $("#valorUnitario").val(),
+      quantidade: $("#quantidade").val(),
+      cliente: $("#cliente").val(),
+      numeroNF: numeroNF, // Usa o valor já formatado
+      dataEmissao: $("#dataEmissao").val(),
+    };
+
+    if (currentEditId) {
+      db.update(currentEditId, novoRegistro);
+    } else {
+      db.add(novoRegistro);
+    }
+
+    $("#cadastroModal").modal("hide");
+    limparFormulario();
+    carregarTabela();
+  });
+
+  // Validação do formulário
+  function validarFormulario() {
+    const campos = [
+      "idProduto",
+      "nomePrato",
+      "valorUnitario",
+      "quantidade",
+      "cliente",
+      "numeroNF",
+      "dataEmissao",
+    ];
+    let valido = true;
+
+    campos.forEach((campo) => {
+      const valor = $(`#${campo}`).val();
+      if (!valor) {
+        $(`#${campo}`).addClass("is-invalid");
+        valido = false;
+      } else {
+        $(`#${campo}`).removeClass("is-invalid");
+      }
+    });
+
+    return valido;
+  }
+
+  // Limpar formulário
+  function limparFormulario() {
+    $("#formCadastro")[0].reset();
+    $("#editId").val("");
+    currentEditId = null;
+  }
+
+  // Botão editar
+  $(document).on("click", ".btn-editar", function () {
+    const id = parseInt($(this).data("id"));
+    const registro = db.getAll().find((item) => item.id === id);
+
+    if (registro) {
+      $("#idProduto").val(registro.idProduto);
+      $("#nomePrato").val(registro.nomePrato);
+      $("#valorUnitario").val(registro.valorUnitario);
+      $("#quantidade").val(registro.quantidade);
+      $("#cliente").val(registro.cliente);
+      $("#numeroNF").val(registro.numeroNF);
+      $("#dataEmissao").val(registro.dataEmissao);
+      $("#editId").val(registro.id);
+      currentEditId = registro.id;
+
+      $("#cadastroModalLabel").text("Editar Registro");
+      $("#cadastroModal").modal("show");
+    }
+  });
+
+  // Botão excluir
+  $(document).on("click", ".btn-excluir", function () {
+    const id = parseInt($(this).data("id"));
+    $("#confirmacaoTexto").html(
+      "Tem certeza que deseja excluir este registro?"
+    );
+
+    $("#btnConfirmar")
+      .off()
+      .on("click", function () {
+        db.delete(id);
+        $("#confirmacaoModal").modal("hide");
+        
+        // Recarregar a tabela e atualizar os gráficos
+        carregarTabela();
+      });
+
+    $("#confirmacaoModal").modal("show");
+  });
+
+  // Botão limpar tabela
+  $("#btnLimparTabela").click(function () {
+    $("#confirmacaoTexto").html(
+      "Tem certeza que deseja limpar todos os registros? Esta ação não pode ser desfeita."
+    );
+
+    $("#btnConfirmar")
+      .off()
+      .on("click", function () {
+        db.clear();
+        $("#confirmacaoModal").modal("hide");
+        
+        // Recarregar a tabela com arrays vazios
+        carregarTabela([]);
+      });
+
+    $("#confirmacaoModal").modal("show");
+  });
+
+  // Exportar para Excel
+  $("#btnExportar").click(function () {
+    if (dadosFiltrados.length === 0) {
+      alert("Não há dados para exportar.");
+      return;
+    }
+
+    const ws = XLSX.utils.json_to_sheet(
+      dadosFiltrados.map((item) => {
+        const valorTotal =
+          parseFloat(item.valorUnitario) * parseInt(item.quantidade);
+        return {
+          "ID Produto": item.idProduto,
+          "Nome do Prato": item.nomePrato,
+          "Valor Unitário": parseFloat(item.valorUnitario),
+          Quantidade: parseInt(item.quantidade),
+          "Valor Total": valorTotal,
+          Cliente: item.cliente,
+          "Número NF": item.numeroNF,
+          "Data Emissão": formatarData(item.dataEmissao),
+        };
+      })
+    );
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Vendas");
+
+    const fileName = `Dashboard_Vendas_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  });
+
+  // Pesquisa
+  $("#barraPesquisa").on("input", function () {
+    termoPesquisa = $(this).val().trim();
+
+    if (termoPesquisa.length > 0) {
+      $("#limparPesquisa").show();
+    } else {
+      $("#limparPesquisa").hide();
+    }
+
+    aplicarFiltros();
+  });
+
+  $("#limparPesquisa").click(function () {
+    $("#barraPesquisa").val("");
+    termoPesquisa = "";
+    $(this).hide();
+    aplicarFiltros();
+  });
+
+  // Filtros
+  $("#filtroAno, #filtroMes, #filtroCliente, #filtroProduto").change(
+    function () {
+      aplicarFiltros();
+    }
+  );
+
+  // Carrega dados iniciais
+  carregarTabela();
+
+  // Esconde o loading após carregar
+  setTimeout(function () {
+    $(".loading").fadeOut();
+  }, 500);
+
+  // Adiciona dados de exemplo se o banco de dados estiver vazio
+/*
+if (db.getAll().length === 0) {
+  const dadosExemplo = [
+    {
+      idProduto: "P001",
+      nomePrato: "Feijoada Completa",
+      valorUnitario: "45.90",
+      quantidade: "12",
+      cliente: "Restaurante Silva",
+      numeroNF: "NF-001",
+      dataEmissao: "2023-01-15",
+    },
+    // ... outros itens
+  ];
+
+  dadosExemplo.forEach((item) => db.add(item));
+  carregarTabela();
+}
+*/
+
+  // Limpa o modal quando é fechado
+  $("#cadastroModal").on("hidden.bs.modal", function () {
+    limparFormulario();
+    $("#cadastroModalLabel").text("Novo Registro");
+  });
+  
+  // Adicionar evento de refresh da página para garantir que os gráficos sejam atualizados
+
+$(window).on('beforeunload', function() {
+  // Força a sincronização dos dados antes de fechar
+  try {
+    const db = new Database();
+    const currentData = db.getAll();
+    localStorage.setItem(db.backupKey, JSON.stringify(currentData));
+    
+    // Garantir que os gráficos sejam destruídos antes de recarregar
+    if (donutChart) {
+      donutChart.destroy();
+    }
+    if (lineChart) {
+      lineChart.destroy();
+    }
+  } catch (error) {
+    console.error("Erro ao sincronizar dados antes de sair:", error);
+  }
+});
+});
+
     </script>
   </body>
 </html>
