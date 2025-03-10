@@ -27,6 +27,9 @@
       }
       .table-responsive {
         margin-bottom: 20px;
+        /* Definindo altura fixa para a tabela */
+        max-height: 420px; /* Altura que comporta aproximadamente 8 linhas */
+        overflow-y: auto;
       }
       #donutChart,
       #lineChart {
@@ -89,9 +92,34 @@
       .highlight {
         background-color: #fff3cd;
       }
+      /* Estiliza a barra de rolagem */
+      .table-responsive::-webkit-scrollbar {
+        width: 8px;
+      }
+      .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+      }
+      .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+      }
+      .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: #555;
+      }
+      /* Fixa o cabeçalho da tabela */
+      #tabelaVendas thead {
+        position: sticky;
+        top: 0;
+        background-color: #fff;
+        z-index: 10;
+      }
       @media (max-width: 768px) {
         .chart-container {
           height: 300px;
+        }
+        .table-responsive {
+          max-height: 350px;
         }
       }
     </style>
@@ -873,7 +901,6 @@
           if (!termo) return dados;
 
           const termoLowerCase = termo.toLowerCase();
-
           return dados.filter(
             (item) =>
               (item.numeroNF &&
@@ -885,150 +912,158 @@
           );
         }
 
-        // Salvar registro
-        function salvarRegistro() {
-          const formData = {
+        // Event handlers
+        $("#btnSalvar").click(function () {
+          if (!validarFormulario()) return;
+
+          const novoRegistro = {
             idProduto: $("#idProduto").val(),
             nomePrato: $("#nomePrato").val(),
-            valorUnitario: parseFloat($("#valorUnitario").val()),
-            quantidade: parseInt($("#quantidade").val()),
+            valorUnitario: $("#valorUnitario").val(),
+            quantidade: $("#quantidade").val(),
             cliente: $("#cliente").val(),
             numeroNF: $("#numeroNF").val(),
             dataEmissao: $("#dataEmissao").val(),
           };
 
           if (currentEditId) {
-            db.update(currentEditId, formData);
+            db.update(currentEditId, novoRegistro);
           } else {
-            db.add(formData);
+            db.add(novoRegistro);
           }
 
           $("#cadastroModal").modal("hide");
-          carregarTabela;
-          $("#cadastroModal").modal("hide");
-          carregarTabela();
           limparFormulario();
+          carregarTabela();
+        });
+
+        // Validação do formulário
+        function validarFormulario() {
+          const campos = [
+            "idProduto",
+            "nomePrato",
+            "valorUnitario",
+            "quantidade",
+            "cliente",
+            "numeroNF",
+            "dataEmissao",
+          ];
+          let valido = true;
+
+          campos.forEach((campo) => {
+            const valor = $(`#${campo}`).val();
+            if (!valor) {
+              $(`#${campo}`).addClass("is-invalid");
+              valido = false;
+            } else {
+              $(`#${campo}`).removeClass("is-invalid");
+            }
+          });
+
+          return valido;
         }
 
         // Limpar formulário
         function limparFormulario() {
           $("#formCadastro")[0].reset();
+          $("#editId").val("");
           currentEditId = null;
-          $("#cadastroModalLabel").text("Novo Registro");
         }
 
-        // Exportar para Excel
-        function exportarExcel() {
-          if (dadosFiltrados.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-          }
-
-          // Prepara os dados para exportação
-          const dadosExportacao = dadosFiltrados.map((item) => {
-            const valorTotal = (
-              parseFloat(item.valorUnitario) * parseInt(item.quantidade)
-            ).toFixed(2);
-
-            return {
-              "ID Produto": item.idProduto,
-              "Nome do Prato": item.nomePrato,
-              "Valor Unitário": parseFloat(item.valorUnitario),
-              Quantidade: parseInt(item.quantidade),
-              "Valor Total": parseFloat(valorTotal),
-              Cliente: item.cliente,
-              "Número NF": item.numeroNF,
-              "Data Emissão": formatarData(item.dataEmissao),
-            };
-          });
-
-          // Cria a planilha
-          const ws = XLSX.utils.json_to_sheet(dadosExportacao);
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "Vendas");
-
-          // Configura o arquivo para download
-          const dataAtual = new Date().toISOString().slice(0, 10);
-          const nomeArquivo = `vendas_${dataAtual}.xlsx`;
-          XLSX.writeFile(wb, nomeArquivo);
-        }
-
-        // Eventos da interface
-        $("#btnSalvar").click(function () {
-          if ($("#formCadastro")[0].checkValidity()) {
-            salvarRegistro();
-          } else {
-            $("#formCadastro")[0].reportValidity();
-          }
-        });
-
+        // Botão editar
         $(document).on("click", ".btn-editar", function () {
           const id = parseInt($(this).data("id"));
-          const dados = db.getAll();
-          const item = dados.find((i) => i.id === id);
+          const registro = db.getAll().find((item) => item.id === id);
 
-          if (item) {
-            currentEditId = id;
-            $("#idProduto").val(item.idProduto);
-            $("#nomePrato").val(item.nomePrato);
-            $("#valorUnitario").val(item.valorUnitario);
-            $("#quantidade").val(item.quantidade);
-            $("#cliente").val(item.cliente);
-            $("#numeroNF").val(item.numeroNF);
-            $("#dataEmissao").val(item.dataEmissao);
+          if (registro) {
+            $("#idProduto").val(registro.idProduto);
+            $("#nomePrato").val(registro.nomePrato);
+            $("#valorUnitario").val(registro.valorUnitario);
+            $("#quantidade").val(registro.quantidade);
+            $("#cliente").val(registro.cliente);
+            $("#numeroNF").val(registro.numeroNF);
+            $("#dataEmissao").val(registro.dataEmissao);
+            $("#editId").val(registro.id);
+            currentEditId = registro.id;
 
             $("#cadastroModalLabel").text("Editar Registro");
             $("#cadastroModal").modal("show");
           }
         });
 
+        // Botão excluir
         $(document).on("click", ".btn-excluir", function () {
           const id = parseInt($(this).data("id"));
-          $("#confirmacaoTexto").text(
+          $("#confirmacaoTexto").html(
             "Tem certeza que deseja excluir este registro?"
           );
-          $("#btnConfirmar").data("action", "excluir").data("id", id);
+
+          $("#btnConfirmar")
+            .off()
+            .on("click", function () {
+              db.delete(id);
+              $("#confirmacaoModal").modal("hide");
+              carregarTabela();
+            });
+
           $("#confirmacaoModal").modal("show");
         });
 
+        // Botão limpar tabela
         $("#btnLimparTabela").click(function () {
-          $("#confirmacaoTexto").text(
+          $("#confirmacaoTexto").html(
             "Tem certeza que deseja limpar todos os registros? Esta ação não pode ser desfeita."
           );
-          $("#btnConfirmar").data("action", "limparTabela");
+
+          $("#btnConfirmar")
+            .off()
+            .on("click", function () {
+              db.clear();
+              $("#confirmacaoModal").modal("hide");
+              carregarTabela();
+            });
+
           $("#confirmacaoModal").modal("show");
         });
 
-        $("#btnConfirmar").click(function () {
-          const action = $(this).data("action");
-
-          if (action === "excluir") {
-            const id = $(this).data("id");
-            db.delete(id);
-            carregarTabela();
-          } else if (action === "limparTabela") {
-            db.clear();
-            carregarTabela();
+        // Exportar para Excel
+        $("#btnExportar").click(function () {
+          if (dadosFiltrados.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
           }
 
-          $("#confirmacaoModal").modal("hide");
+          const ws = XLSX.utils.json_to_sheet(
+            dadosFiltrados.map((item) => {
+              const valorTotal =
+                parseFloat(item.valorUnitario) * parseInt(item.quantidade);
+              return {
+                "ID Produto": item.idProduto,
+                "Nome do Prato": item.nomePrato,
+                "Valor Unitário": parseFloat(item.valorUnitario),
+                Quantidade: parseInt(item.quantidade),
+                "Valor Total": valorTotal,
+                Cliente: item.cliente,
+                "Número NF": item.numeroNF,
+                "Data Emissão": formatarData(item.dataEmissao),
+              };
+            })
+          );
+
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Vendas");
+
+          const fileName = `Dashboard_Vendas_${
+            new Date().toISOString().split("T")[0]
+          }.xlsx`;
+          XLSX.writeFile(wb, fileName);
         });
 
-        $("#btnExportar").click(exportarExcel);
-
-        // Eventos dos filtros
-        $("#filtroAno, #filtroMes, #filtroCliente, #filtroProduto").change(
-          function () {
-            aplicarFiltros();
-          }
-        );
-
-        // Eventos de pesquisa
+        // Pesquisa
         $("#barraPesquisa").on("input", function () {
           termoPesquisa = $(this).val().trim();
 
-          // Mostra o botão de limpar pesquisa se tiver texto
-          if (termoPesquisa) {
+          if (termoPesquisa.length > 0) {
             $("#limparPesquisa").show();
           } else {
             $("#limparPesquisa").hide();
@@ -1044,148 +1079,79 @@
           aplicarFiltros();
         });
 
-        // Adicionar dados de demonstração se o banco estiver vazio
-        function adicionarDadosDemo() {
-          if (db.getAll().length === 0) {
-            const dataAtual = new Date();
-            const anoAtual = dataAtual.getFullYear();
-            const mesAtual = dataAtual.getMonth();
-
-            const dadosDemo = [
-              {
-                idProduto: "P001",
-                nomePrato: "Feijoada Completa",
-                valorUnitario: 45.9,
-                quantidade: 12,
-                cliente: "Restaurante Sabor do Brasil",
-                numeroNF: "NF-00123",
-                dataEmissao: new Date(anoAtual, mesAtual - 1, 15)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P002",
-                nomePrato: "Moqueca de Peixe",
-                valorUnitario: 52.5,
-                quantidade: 8,
-                cliente: "Restaurante Sabor do Brasil",
-                numeroNF: "NF-00124",
-                dataEmissao: new Date(anoAtual, mesAtual - 1, 16)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P003",
-                nomePrato: "Picanha ao Ponto",
-                valorUnitario: 68.9,
-                quantidade: 15,
-                cliente: "Churrascaria Brasa Viva",
-                numeroNF: "NF-00125",
-                dataEmissao: new Date(anoAtual, mesAtual, 5)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P004",
-                nomePrato: "Bacalhau à Portuguesa",
-                valorUnitario: 72.5,
-                quantidade: 6,
-                cliente: "Restaurante Lisboa",
-                numeroNF: "NF-00126",
-                dataEmissao: new Date(anoAtual, mesAtual, 8)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P005",
-                nomePrato: "Risoto de Camarão",
-                valorUnitario: 58.9,
-                quantidade: 10,
-                cliente: "Restaurante Lisboa",
-                numeroNF: "NF-00127",
-                dataEmissao: new Date(anoAtual, mesAtual, 12)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P001",
-                nomePrato: "Feijoada Completa",
-                valorUnitario: 45.9,
-                quantidade: 18,
-                cliente: "Restaurante Sabor & Tradição",
-                numeroNF: "NF-00128",
-                dataEmissao: new Date(anoAtual, mesAtual, 15)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P006",
-                nomePrato: "Paella Valenciana",
-                valorUnitario: 65.9,
-                quantidade: 5,
-                cliente: "Sabores de Espanha",
-                numeroNF: "NF-00129",
-                dataEmissao: new Date(anoAtual, mesAtual, 18)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P007",
-                nomePrato: "Bobó de Camarão",
-                valorUnitario: 62.5,
-                quantidade: 9,
-                cliente: "Restaurante Sabor do Brasil",
-                numeroNF: "NF-00130",
-                dataEmissao: new Date(anoAtual, mesAtual, 22)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P003",
-                nomePrato: "Picanha ao Ponto",
-                valorUnitario: 68.9,
-                quantidade: 20,
-                cliente: "Churrascaria Brasa Viva",
-                numeroNF: "NF-00131",
-                dataEmissao: new Date(anoAtual, mesAtual - 2, 10)
-                  .toISOString()
-                  .split("T")[0],
-              },
-              {
-                idProduto: "P008",
-                nomePrato: "Salmão Grelhado",
-                valorUnitario: 59.9,
-                quantidade: 12,
-                cliente: "Restaurante Mar & Peixe",
-                numeroNF: "NF-00132",
-                dataEmissao: new Date(anoAtual, mesAtual - 2, 18)
-                  .toISOString()
-                  .split("T")[0],
-              },
-            ];
-
-            dadosDemo.forEach((item) => db.add(item));
+        // Filtros
+        $("#filtroAno, #filtroMes, #filtroCliente, #filtroProduto").change(
+          function () {
+            aplicarFiltros();
           }
-        }
+        );
 
-        // Inicializa a aplicação
-        function inicializar() {
-          // Adiciona dados de demonstração se necessário
-          adicionarDadosDemo();
+        // Carrega dados iniciais
+        carregarTabela();
 
-          // Carrega os dados na tabela
-          carregarTabela();
-
-          // Esconde o spinner de carregamento
+        // Esconde o loading após carregar
+        setTimeout(function () {
           $(".loading").fadeOut();
+        }, 500);
+
+        // Adiciona dados de exemplo se o banco de dados estiver vazio
+        if (db.getAll().length === 0) {
+          const dadosExemplo = [
+            {
+              idProduto: "P001",
+              nomePrato: "Feijoada Completa",
+              valorUnitario: "45.90",
+              quantidade: "12",
+              cliente: "Restaurante Silva",
+              numeroNF: "NF-001",
+              dataEmissao: "2023-01-15",
+            },
+            {
+              idProduto: "P002",
+              nomePrato: "Picanha ao Ponto",
+              valorUnitario: "69.90",
+              quantidade: "8",
+              cliente: "Churrascaria Gaúcha",
+              numeroNF: "NF-002",
+              dataEmissao: "2023-01-20",
+            },
+            {
+              idProduto: "P003",
+              nomePrato: "Macarronada Italiana",
+              valorUnitario: "38.50",
+              quantidade: "15",
+              cliente: "Cantina Don Pietro",
+              numeroNF: "NF-003",
+              dataEmissao: "2023-02-05",
+            },
+            {
+              idProduto: "P001",
+              nomePrato: "Feijoada Completa",
+              valorUnitario: "45.90",
+              quantidade: "10",
+              cliente: "Restaurante Silva",
+              numeroNF: "NF-004",
+              dataEmissao: "2023-02-18",
+            },
+            {
+              idProduto: "P004",
+              nomePrato: "Risoto de Camarão",
+              valorUnitario: "58.90",
+              quantidade: "6",
+              cliente: "Restaurante Mar & Terra",
+              numeroNF: "NF-005",
+              dataEmissao: "2023-03-10",
+            },
+          ];
+
+          dadosExemplo.forEach((item) => db.add(item));
+          carregarTabela();
         }
 
-        // Inicialização com um pequeno atraso para simular carregamento
-        setTimeout(inicializar, 1000);
-
-        // Eventos modal
+        // Limpa o modal quando é fechado
         $("#cadastroModal").on("hidden.bs.modal", function () {
           limparFormulario();
+          $("#cadastroModalLabel").text("Novo Registro");
         });
       });
     </script>
