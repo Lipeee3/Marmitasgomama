@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard de Vendas</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .card-kpi {
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s;
+      }
+      .card-kpi:hover {
+        transform: translateY(-5px);
+      }
+      .chart-container {
+        height: 350px;
+        margin-bottom: 20px;
+      }
+      .table-responsive {
+        margin-bottom: 20px;
+      }
+      #donutChart,
+      #lineChart {
+        width: 100%;
+        height: 100%;
+      }
+      .btn-export {
+        margin-right: 10px;
+      }
+      .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .search-box {
+        position: relative;
+        margin-bottom: 20px;
+      }
+      .search-box .form-control {
+        padding-left: 40px;
+        border-radius: 20px;
+      }
+      .search-icon {
+        position: absolute;
+        left: 15px;
+        top: 10px;
+        color: #6c757d;
+      }
+      .clear-search {
+        position: absolute;
+        right: 15px;
+        top: 10px;
+        color: #6c757d;
+        cursor: pointer;
+        display: none;
+      }
+      .highlight {
+        background-color: #fff3cd;
+      }
+      @media (max-width: 768px) {
+        .chart-container {
+          height: 300px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="loading">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <div class="container-fluid py-4">
+      <div class="row mb-4">
+        <div class="col-12">
+          <h1 class="text-center">Dashboard de Vendas</h1>
+        </div>
+      </div>
+
+      <!-- Barra de Pesquisa -->
+      <div class="row mb-3">
+        <div class="col-md-12">
+          <div class="search-box">
+            <i class="fas fa-search search-icon"></i>
+            <input
+              type="text"
+              class="form-control"
+              id="barraPesquisa"
+              placeholder="Pesquisar por Número NF, ID Produto ou Nome do Produto..."
+            />
+            <i class="fas fa-times clear-search" id="limparPesquisa"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+          <label for="filtroAno" class="form-label">Ano</label>
+          <select class="form-select" id="filtroAno">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label for="filtroMes" class="form-label">Mês</label>
+          <select class="form-select" id="filtroMes">
+            <option value="">Todos</option>
+            <option value="1">Janeiro</option>
+            <option value="2">Fevereiro</option>
+            <option value="3">Março</option>
+            <option value="4">Abril</option>
+            <option value="5">Maio</option>
+            <option value="6">Junho</option>
+            <option value="7">Julho</option>
+            <option value="8">Agosto</option>
+            <option value="9">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label for="filtroCliente" class="form-label">Cliente</label>
+          <select class="form-select" id="filtroCliente">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="col-md-3 mb-3">
+          <label for="filtroProduto" class="form-label">Produto</label>
+          <select class="form-select" id="filtroProduto">
+            <option value="">Todos</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botões de Ação -->
+      <div class="row mb-4">
+        <div class="col-12 text-end">
+          <button
+            class="btn btn-success mb-2"
+            data-bs-toggle="modal"
+            data-bs-target="#cadastroModal"
+          >
+            <i class="fas fa-plus"></i> Novo Registro
+          </button>
+          <button class="btn btn-primary btn-export mb-2" id="btnExportar">
+            <i class="fas fa-file-export"></i> Exportar Excel
+          </button>
+          <button class="btn btn-danger mb-2" id="btnLimparTabela">
+            <i class="fas fa-trash"></i> Limpar Tabela
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabela de Registros -->
+      <div class="row mb-4">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Registros de Vendas</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table
+                  class="table table-striped table-hover"
+                  id="tabelaVendas"
+                >
+                  <thead>
+                    <tr>
+                      <th>ID Produto</th>
+                      <th>Nome do Prato</th>
+                      <th>Valor Unitário</th>
+                      <th>Quantidade</th>
+                      <th>Valor Total</th>
+                      <th>Cliente</th>
+                      <th>Número NF</th>
+                      <th>Data Emissão</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Dados serão carregados dinamicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cards KPI -->
+      <div class="row mb-4">
+        <div class="col-md-6">
+          <div class="card card-kpi bg-info text-white">
+            <div class="card-body">
+              <h5 class="card-title">Total de Vendas</h5>
+              <h2 class="card-text" id="kpiTotalVendas">R$ 0,00</h2>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card card-kpi bg-success text-white">
+            <div class="card-body">
+              <h5 class="card-title">Quantidade Total</h5>
+              <h2 class="card-text" id="kpiQuantidadeTotal">0</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="row">
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Participação por Cliente</h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="donutChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6 mb-4">
+          <div class="card">
+            <div class="card-header bg-primary text-white">
+              <h5 class="mb-0">Evolução Mensal de Vendas</h5>
+            </div>
+            <div class="card-body">
+              <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Cadastro -->
+    <div
+      class="modal fade"
+      id="cadastroModal"
+      tabindex="-1"
+      aria-labelledby="cadastroModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="cadastroModalLabel">Novo Registro</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <form id="formCadastro">
+              <input type="hidden" id="editId" />
+              <div class="mb-3">
+                <label for="idProduto" class="form-label">ID Produto *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="idProduto"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="nomePrato" class="form-label"
+                  >Nome do Prato *</label
+                >
+                <input
+                  type="text"
+                  class="form-control"
+                  id="nomePrato"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="valorUnitario" class="form-label"
+                  >Valor Unitário *</label
+                >
+                <input
+                  type="number"
+                  class="form-control"
+                  id="valorUnitario"
+                  step="0.01"
+                  min="0"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="quantidade" class="form-label"
+                  >Quantidade de Saída *</label
+                >
+                <input
+                  type="number"
+                  class="form-control"
+                  id="quantidade"
+                  min="1"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="cliente" class="form-label">Cliente *</label>
+                <input type="text" class="form-control" id="cliente" required />
+              </div>
+              <div class="mb-3">
+                <label for="numeroNF" class="form-label">Número da NF *</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="numeroNF"
+                  required
+                />
+              </div>
+              <div class="mb-3">
+                <label for="dataEmissao" class="form-label"
+                  >Data de Emissão *</label
+                >
+                <input
+                  type="date"
+                  class="form-control"
+                  id="dataEmissao"
+                  required
+                />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-primary" id="btnSalvar">
+              Salvar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div
+      class="modal fade"
+      id="confirmacaoModal"
+      tabindex="-1"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">Confirmação</h5>
+            <button
+              type="button"
+              class="btn-close btn-close-white"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body" id="confirmacaoTexto">
+            Tem certeza que deseja realizar esta ação?
+          </div>
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              Cancelar
+            </button>
+            <button type="button" class="btn btn-danger" id="btnConfirmar">
+              Confirmar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+      // Banco de dados simulado usando localStorage
+      class Database {
+        constructor() {
+          this.dbName = "dashboardVendas";
+          this.init();
+        }
+
+        init() {
+          if (!localStorage.getItem(this.dbName)) {
+            localStorage.setItem(this.dbName, JSON.stringify([]));
+          }
+        }
+
+        getAll() {
+          return JSON.parse(localStorage.getItem(this.dbName)) || [];
+        }
+
+        add(item) {
+          const data = this.getAll();
+          item.id = Date.now(); // ID único baseado no timestamp
+          data.push(item);
+          localStorage.setItem(this.dbName, JSON.stringify(data));
+          return item;
+        }
+
+        update(id, newData) {
+          const data = this.getAll();
+          const index = data.findIndex((item) => item.id === id);
+          if (index !== -1) {
+            data[index] = { ...data[index], ...newData };
+            localStorage.setItem(this.dbName, JSON.stringify(data));
+            return data[index];
+          }
+          return null;
+        }
+
+        delete(id) {
+          const data = this.getAll();
+          const newData = data.filter((item) => item.id !== id);
+          localStorage.setItem(this.dbName, JSON.stringify(newData));
+          return true;
+        }
+
+        clear() {
+          localStorage.setItem(this.dbName, JSON.stringify([]));
+          return true;
+        }
+      }
+
+      // Inicializa a aplicação
+      $(document).ready(function () {
+        const db = new Database();
+        let donutChart, lineChart;
+        let currentEditId = null;
+        let dadosFiltrados = [];
+        let termoPesquisa = "";
+
+        // Funções de formatação
+        function formatarData(dataISO) {
+          if (!dataISO) return "";
+          const data = new Date(dataISO);
+          return data.toLocaleDateString("pt-BR");
+        }
+
+        function formatarMoeda(valor) {
+          return valor.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          });
+        }
+
+        // Carrega dados na tabela
+        function carregarTabela(dados = null) {
+          const registros = dados || db.getAll();
+          dadosFiltrados = registros;
+
+          const tbody = $("#tabelaVendas tbody");
+          tbody.empty();
+
+          if (registros.length === 0) {
+            tbody.append(`
+                <tr>
+                    <td colspan="9" class="text-center">Nenhum registro encontrado</td>
+                </tr>
+            `);
+            return;
+          }
+
+          registros.forEach((registro) => {
+            const valorTotal = (
+              parseFloat(registro.valorUnitario) * parseInt(registro.quantidade)
+            ).toFixed(2);
+
+            // Prepara o HTML com destaque dos termos pesquisados
+            let idProdutoHTML = registro.idProduto;
+            let nomePratoHTML = registro.nomePrato || "";
+            let numeroNFHTML = registro.numeroNF;
+
+            if (termoPesquisa) {
+              const regex = new RegExp(termoPesquisa, "gi");
+
+              if (registro.idProduto.match(regex)) {
+                idProdutoHTML = registro.idProduto.replace(
+                  regex,
+                  (match) => `<span class="highlight">${match}</span>`
+                );
+              }
+
+              if (registro.nomePrato && registro.nomePrato.match(regex)) {
+                nomePratoHTML = registro.nomePrato.replace(
+                  regex,
+                  (match) => `<span class="highlight">${match}</span>`
+                );
+              }
+
+              if (registro.numeroNF.match(regex)) {
+                numeroNFHTML = registro.numeroNF.replace(
+                  regex,
+                  (match) => `<span class="highlight">${match}</span>`
+                );
+              }
+            }
+
+            tbody.append(`
+                <tr data-id="${registro.id}">
+                    <td>${idProdutoHTML}</td>
+                    <td>${nomePratoHTML}</td>
+                    <td>${formatarMoeda(
+                      parseFloat(registro.valorUnitario)
+                    )}</td>
+                    <td>${registro.quantidade}</td>
+                    <td>${formatarMoeda(parseFloat(valorTotal))}</td>
+                    <td>${registro.cliente}</td>
+                    <td>${numeroNFHTML}</td>
+                    <td>${formatarData(registro.dataEmissao)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning btn-editar" data-id="${
+                          registro.id
+                        }">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger btn-excluir" data-id="${
+                          registro.id
+                        }">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+          });
+
+          atualizarKPIs(registros);
+          atualizarGraficos(registros);
+          atualizarFiltros(registros);
+        }
+
+        // Atualiza os KPIs
+        function atualizarKPIs(dados) {
+          let totalVendas = 0;
+          let quantidadeTotal = 0;
+
+          dados.forEach((registro) => {
+            const valorTotal =
+              parseFloat(registro.valorUnitario) *
+              parseInt(registro.quantidade);
+            totalVendas += valorTotal;
+            quantidadeTotal += parseInt(registro.quantidade);
+          });
+
+          $("#kpiTotalVendas").text(formatarMoeda(totalVendas));
+          $("#kpiQuantidadeTotal").text(quantidadeTotal);
+        }
+
+        // Atualiza os gráficos
+        function atualizarGraficos(dados) {
+          // Gráfico de Rosca - Participação por Cliente
+          const clientesData = {};
+          dados.forEach((registro) => {
+            const valorTotal =
+              parseFloat(registro.valorUnitario) *
+              parseInt(registro.quantidade);
+            if (clientesData[registro.cliente]) {
+              clientesData[registro.cliente] += valorTotal;
+            } else {
+              clientesData[registro.cliente] = valorTotal;
+            }
+          });
+
+          const clientesLabels = Object.keys(clientesData);
+          const clientesValues = Object.values(clientesData);
+
+          // Gera cores aleatórias para o gráfico
+          const backgroundColors = clientesLabels.map(() => {
+            const r = Math.floor(Math.random() * 255);
+            const g = Math.floor(Math.random() * 255);
+            const b = Math.floor(Math.random() * 255);
+            return `rgba(${r}, ${g}, ${b}, 0.7)`;
+          });
+
+          // Gráfico de Evolução Mensal
+          const vendasPorMes = {
+            1: 0,
+            2: 0,
+            3: 0,
+            4: 0,
+            5: 0,
+            6: 0,
+            7: 0,
+            8: 0,
+            9: 0,
+            10: 0,
+            11: 0,
+            12: 0,
+          };
+
+          dados.forEach((registro) => {
+            if (registro.dataEmissao) {
+              const data = new Date(registro.dataEmissao);
+              const mes = data.getMonth() + 1;
+              const valorTotal =
+                parseFloat(registro.valorUnitario) *
+                parseInt(registro.quantidade);
+              vendasPorMes[mes] += valorTotal;
+            }
+          });
+
+          const mesesLabels = [
+            "Janeiro",
+            "Fevereiro",
+            "Março",
+            "Abril",
+            "Maio",
+            "Junho",
+            "Julho",
+            "Agosto",
+            "Setembro",
+            "Outubro",
+            "Novembro",
+            "Dezembro",
+          ];
+          const vendasValues = Object.values(vendasPorMes);
+
+          // Atualiza ou cria o gráfico de rosca
+          if (donutChart) {
+            donutChart.data.labels = clientesLabels;
+            donutChart.data.datasets[0].data = clientesValues;
+            donutChart.data.datasets[0].backgroundColor = backgroundColors;
+            donutChart.update();
+          } else {
+            const ctxDonut = document
+              .getElementById("donutChart")
+              .getContext("2d");
+            donutChart = new Chart(ctxDonut, {
+              type: "doughnut",
+              data: {
+                labels: clientesLabels,
+                datasets: [
+                  {
+                    data: clientesValues,
+                    backgroundColor: backgroundColors,
+                    borderWidth: 1,
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: "right",
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        const value = context.raw;
+                        const total = context.dataset.data.reduce(
+                          (a, b) => a + b,
+                          0
+                        );
+                        const percentage = Math.round((value / total) * 100);
+                        return `${context.label}: ${formatarMoeda(
+                          value
+                        )} (${percentage}%)`;
+                      },
+                    },
+                  },
+                },
+                onClick: function (event, elements) {
+                  if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const cliente = clientesLabels[index];
+                    $("#filtroCliente").val(cliente);
+                    aplicarFiltros();
+                  }
+                },
+              },
+            });
+          }
+
+          // Atualiza ou cria o gráfico de linha
+          if (lineChart) {
+            lineChart.data.labels = mesesLabels;
+            lineChart.data.datasets[0].data = vendasValues;
+            lineChart.update();
+          } else {
+            const ctxLine = document
+              .getElementById("lineChart")
+              .getContext("2d");
+            lineChart = new Chart(ctxLine, {
+              type: "line",
+              data: {
+                labels: mesesLabels,
+                datasets: [
+                  {
+                    label: "Vendas Mensais",
+                    data: vendasValues,
+                    backgroundColor: "rgba(54, 162, 235, 0.2)",
+                    borderColor: "rgba(54, 162, 235, 1)",
+                    borderWidth: 2,
+                    tension: 0.3,
+                    fill: true,
+                  },
+                ],
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    ticks: {
+                      callback: function (value) {
+                        return formatarMoeda(value);
+                      },
+                    },
+                  },
+                },
+                plugins: {
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        return `Vendas: ${formatarMoeda(context.raw)}`;
+                      },
+                    },
+                  },
+                },
+              },
+            });
+          }
+        }
+
+        // Atualiza os filtros
+        function atualizarFiltros(dados) {
+          // Obtém valores únicos para cada filtro
+          const anos = [
+            ...new Set(
+              dados
+                .map((item) => {
+                  return item.dataEmissao
+                    ? new Date(item.dataEmissao).getFullYear()
+                    : null;
+                })
+                .filter(Boolean)
+            ),
+          ];
+
+          const clientes = [...new Set(dados.map((item) => item.cliente))];
+          const produtos = [...new Set(dados.map((item) => item.idProduto))];
+
+          // Limpa e recria as opções dos filtros
+          const filtroAno = $("#filtroAno");
+          const filtroCliente = $("#filtroCliente");
+          const filtroProduto = $("#filtroProduto");
+
+          // Preserva a opção "Todos"
+          const anoSelecionado = filtroAno.val();
+          const clienteSelecionado = filtroCliente.val();
+          const produtoSelecionado = filtroProduto.val();
+
+          filtroAno.html('<option value="">Todos</option>');
+          filtroCliente.html('<option value="">Todos</option>');
+          filtroProduto.html('<option value="">Todos</option>');
+
+          // Adiciona as opções
+          anos
+            .sort((a, b) => b - a)
+            .forEach((ano) => {
+              filtroAno.append(`<option value="${ano}">${ano}</option>`);
+            });
+
+          clientes.sort().forEach((cliente) => {
+            filtroCliente.append(
+              `<option value="${cliente}">${cliente}</option>`
+            );
+          });
+
+          produtos.sort().forEach((produto) => {
+            filtroProduto.append(
+              `<option value="${produto}">${produto}</option>`
+            );
+          });
+
+          // Restaura a seleção anterior
+          filtroAno.val(anoSelecionado);
+          filtroCliente.val(clienteSelecionado);
+          filtroProduto.val(produtoSelecionado);
+        }
+
+        // Aplica os filtros
+        function aplicarFiltros() {
+          const anoSelecionado = $("#filtroAno").val();
+          const mesSelecionado = $("#filtroMes").val();
+          const clienteSelecionado = $("#filtroCliente").val();
+          const produtoSelecionado = $("#filtroProduto").val();
+
+          let dados = db.getAll();
+
+          if (anoSelecionado) {
+            dados = dados.filter((item) => {
+              const data = new Date(item.dataEmissao);
+              return data.getFullYear() == anoSelecionado;
+            });
+          }
+
+          if (mesSelecionado) {
+            dados = dados.filter((item) => {
+              const data = new Date(item.dataEmissao);
+              return data.getMonth() + 1 == mesSelecionado;
+            });
+          }
+
+          if (clienteSelecionado) {
+            dados = dados.filter((item) => item.cliente === clienteSelecionado);
+          }
+
+          if (produtoSelecionado) {
+            dados = dados.filter(
+              (item) => item.idProduto === produtoSelecionado
+            );
+          }
+
+          // Aplica a pesquisa textual, se houver
+          if (termoPesquisa) {
+            dados = filtrarPorPesquisa(dados, termoPesquisa);
+          }
+
+          carregarTabela(dados);
+        }
+
+        // Função de pesquisa textual
+        function filtrarPorPesquisa(dados, termo) {
+          if (!termo) return dados;
+
+          const termoLowerCase = termo.toLowerCase();
+
+          return dados.filter(
+            (item) =>
+              (item.numeroNF &&
+                item.numeroNF.toLowerCase().includes(termoLowerCase)) ||
+              (item.idProduto &&
+                item.idProduto.toLowerCase().includes(termoLowerCase)) ||
+              (item.nomePrato &&
+                item.nomePrato.toLowerCase().includes(termoLowerCase))
+          );
+        }
+
+        // Salvar registro
+        function salvarRegistro() {
+          const formData = {
+            idProduto: $("#idProduto").val(),
+            nomePrato: $("#nomePrato").val(),
+            valorUnitario: parseFloat($("#valorUnitario").val()),
+            quantidade: parseInt($("#quantidade").val()),
+            cliente: $("#cliente").val(),
+            numeroNF: $("#numeroNF").val(),
+            dataEmissao: $("#dataEmissao").val(),
+          };
+
+          if (currentEditId) {
+            db.update(currentEditId, formData);
+          } else {
+            db.add(formData);
+          }
+
+          $("#cadastroModal").modal("hide");
+          carregarTabela;
+          $("#cadastroModal").modal("hide");
+          carregarTabela();
+          limparFormulario();
+        }
+
+        // Limpar formulário
+        function limparFormulario() {
+          $("#formCadastro")[0].reset();
+          currentEditId = null;
+          $("#cadastroModalLabel").text("Novo Registro");
+        }
+
+        // Exportar para Excel
+        function exportarExcel() {
+          if (dadosFiltrados.length === 0) {
+            alert("Não há dados para exportar.");
+            return;
+          }
+
+          // Prepara os dados para exportação
+          const dadosExportacao = dadosFiltrados.map((item) => {
+            const valorTotal = (
+              parseFloat(item.valorUnitario) * parseInt(item.quantidade)
+            ).toFixed(2);
+
+            return {
+              "ID Produto": item.idProduto,
+              "Nome do Prato": item.nomePrato,
+              "Valor Unitário": parseFloat(item.valorUnitario),
+              Quantidade: parseInt(item.quantidade),
+              "Valor Total": parseFloat(valorTotal),
+              Cliente: item.cliente,
+              "Número NF": item.numeroNF,
+              "Data Emissão": formatarData(item.dataEmissao),
+            };
+          });
+
+          // Cria a planilha
+          const ws = XLSX.utils.json_to_sheet(dadosExportacao);
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, "Vendas");
+
+          // Configura o arquivo para download
+          const dataAtual = new Date().toISOString().slice(0, 10);
+          const nomeArquivo = `vendas_${dataAtual}.xlsx`;
+          XLSX.writeFile(wb, nomeArquivo);
+        }
+
+        // Eventos da interface
+        $("#btnSalvar").click(function () {
+          if ($("#formCadastro")[0].checkValidity()) {
+            salvarRegistro();
+          } else {
+            $("#formCadastro")[0].reportValidity();
+          }
+        });
+
+        $(document).on("click", ".btn-editar", function () {
+          const id = parseInt($(this).data("id"));
+          const dados = db.getAll();
+          const item = dados.find((i) => i.id === id);
+
+          if (item) {
+            currentEditId = id;
+            $("#idProduto").val(item.idProduto);
+            $("#nomePrato").val(item.nomePrato);
+            $("#valorUnitario").val(item.valorUnitario);
+            $("#quantidade").val(item.quantidade);
+            $("#cliente").val(item.cliente);
+            $("#numeroNF").val(item.numeroNF);
+            $("#dataEmissao").val(item.dataEmissao);
+
+            $("#cadastroModalLabel").text("Editar Registro");
+            $("#cadastroModal").modal("show");
+          }
+        });
+
+        $(document).on("click", ".btn-excluir", function () {
+          const id = parseInt($(this).data("id"));
+          $("#confirmacaoTexto").text(
+            "Tem certeza que deseja excluir este registro?"
+          );
+          $("#btnConfirmar").data("action", "excluir").data("id", id);
+          $("#confirmacaoModal").modal("show");
+        });
+
+        $("#btnLimparTabela").click(function () {
+          $("#confirmacaoTexto").text(
+            "Tem certeza que deseja limpar todos os registros? Esta ação não pode ser desfeita."
+          );
+          $("#btnConfirmar").data("action", "limparTabela");
+          $("#confirmacaoModal").modal("show");
+        });
+
+        $("#btnConfirmar").click(function () {
+          const action = $(this).data("action");
+
+          if (action === "excluir") {
+            const id = $(this).data("id");
+            db.delete(id);
+            carregarTabela();
+          } else if (action === "limparTabela") {
+            db.clear();
+            carregarTabela();
+          }
+
+          $("#confirmacaoModal").modal("hide");
+        });
+
+        $("#btnExportar").click(exportarExcel);
+
+        // Eventos dos filtros
+        $("#filtroAno, #filtroMes, #filtroCliente, #filtroProduto").change(
+          function () {
+            aplicarFiltros();
+          }
+        );
+
+        // Eventos de pesquisa
+        $("#barraPesquisa").on("input", function () {
+          termoPesquisa = $(this).val().trim();
+
+          // Mostra o botão de limpar pesquisa se tiver texto
+          if (termoPesquisa) {
+            $("#limparPesquisa").show();
+          } else {
+            $("#limparPesquisa").hide();
+          }
+
+          aplicarFiltros();
+        });
+
+        $("#limparPesquisa").click(function () {
+          $("#barraPesquisa").val("");
+          termoPesquisa = "";
+          $(this).hide();
+          aplicarFiltros();
+        });
+
+        // Adicionar dados de demonstração se o banco estiver vazio
+        function adicionarDadosDemo() {
+          if (db.getAll().length === 0) {
+            const dataAtual = new Date();
+            const anoAtual = dataAtual.getFullYear();
+            const mesAtual = dataAtual.getMonth();
+
+            const dadosDemo = [
+              {
+                idProduto: "P001",
+                nomePrato: "Feijoada Completa",
+                valorUnitario: 45.9,
+                quantidade: 12,
+                cliente: "Restaurante Sabor do Brasil",
+                numeroNF: "NF-00123",
+                dataEmissao: new Date(anoAtual, mesAtual - 1, 15)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P002",
+                nomePrato: "Moqueca de Peixe",
+                valorUnitario: 52.5,
+                quantidade: 8,
+                cliente: "Restaurante Sabor do Brasil",
+                numeroNF: "NF-00124",
+                dataEmissao: new Date(anoAtual, mesAtual - 1, 16)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P003",
+                nomePrato: "Picanha ao Ponto",
+                valorUnitario: 68.9,
+                quantidade: 15,
+                cliente: "Churrascaria Brasa Viva",
+                numeroNF: "NF-00125",
+                dataEmissao: new Date(anoAtual, mesAtual, 5)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P004",
+                nomePrato: "Bacalhau à Portuguesa",
+                valorUnitario: 72.5,
+                quantidade: 6,
+                cliente: "Restaurante Lisboa",
+                numeroNF: "NF-00126",
+                dataEmissao: new Date(anoAtual, mesAtual, 8)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P005",
+                nomePrato: "Risoto de Camarão",
+                valorUnitario: 58.9,
+                quantidade: 10,
+                cliente: "Restaurante Lisboa",
+                numeroNF: "NF-00127",
+                dataEmissao: new Date(anoAtual, mesAtual, 12)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P001",
+                nomePrato: "Feijoada Completa",
+                valorUnitario: 45.9,
+                quantidade: 18,
+                cliente: "Restaurante Sabor & Tradição",
+                numeroNF: "NF-00128",
+                dataEmissao: new Date(anoAtual, mesAtual, 15)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P006",
+                nomePrato: "Paella Valenciana",
+                valorUnitario: 65.9,
+                quantidade: 5,
+                cliente: "Sabores de Espanha",
+                numeroNF: "NF-00129",
+                dataEmissao: new Date(anoAtual, mesAtual, 18)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P007",
+                nomePrato: "Bobó de Camarão",
+                valorUnitario: 62.5,
+                quantidade: 9,
+                cliente: "Restaurante Sabor do Brasil",
+                numeroNF: "NF-00130",
+                dataEmissao: new Date(anoAtual, mesAtual, 22)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P003",
+                nomePrato: "Picanha ao Ponto",
+                valorUnitario: 68.9,
+                quantidade: 20,
+                cliente: "Churrascaria Brasa Viva",
+                numeroNF: "NF-00131",
+                dataEmissao: new Date(anoAtual, mesAtual - 2, 10)
+                  .toISOString()
+                  .split("T")[0],
+              },
+              {
+                idProduto: "P008",
+                nomePrato: "Salmão Grelhado",
+                valorUnitario: 59.9,
+                quantidade: 12,
+                cliente: "Restaurante Mar & Peixe",
+                numeroNF: "NF-00132",
+                dataEmissao: new Date(anoAtual, mesAtual - 2, 18)
+                  .toISOString()
+                  .split("T")[0],
+              },
+            ];
+
+            dadosDemo.forEach((item) => db.add(item));
+          }
+        }
+
+        // Inicializa a aplicação
+        function inicializar() {
+          // Adiciona dados de demonstração se necessário
+          adicionarDadosDemo();
+
+          // Carrega os dados na tabela
+          carregarTabela();
+
+          // Esconde o spinner de carregamento
+          $(".loading").fadeOut();
+        }
+
+        // Inicialização com um pequeno atraso para simular carregamento
+        setTimeout(inicializar, 1000);
+
+        // Eventos modal
+        $("#cadastroModal").on("hidden.bs.modal", function () {
+          limparFormulario();
+        });
+      });
+    </script>
+  </body>
+</html>
