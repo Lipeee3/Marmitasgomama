@@ -13,7 +13,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-    
+
     <style>
       .card-kpi {
         border-radius: 8px;
@@ -953,18 +953,14 @@
                           0
                         );
                         const percentage = Math.round((value / total) * 100);
-                        return `
-        <div style="color: #333; font-size: 14px;">
-          <strong>${context.label}</strong><br>
-          Valor: ${formatarMoeda(value)}<br>
-          Percentual: ${percentage}%
-        </div>
-      `;
+                        return `${context.label}: ${formatarMoeda(
+                          value
+                        )} (${percentage}%)`;
                       },
                     },
                     enabled: true,
-                    mode: "index", // Mostra informações de todos os datasets no ponto
-                    intersect: false, // Permite interagir fora dos pontos
+                    mode: "index",
+                    intersect: false,
                   },
                 },
                 animation: {
@@ -1029,18 +1025,14 @@
                           0
                         );
                         const percentage = Math.round((value / total) * 100);
-                        return `
-        <div style="color: #333; font-size: 14px;">
-          <strong>${context.label}</strong><br>
-          Valor: ${formatarMoeda(value)}<br>
-          Percentual: ${percentage}%
-        </div>
-      `;
+                        return `${context.label}: ${formatarMoeda(
+                          value
+                        )} (${percentage}%)`;
                       },
                     },
                     enabled: true,
-                    mode: "index", // Mostra informações de todos os datasets no ponto
-                    intersect: false, // Permite interagir fora dos pontos
+                    mode: "index",
+                    intersect: false,
                   },
                 },
                 animation: {
@@ -1375,25 +1367,13 @@
         }, 500);
 
         // Adiciona dados de exemplo se o banco de dados estiver vazio
-        /*
-if (db.getAll().length === 0) {
-  const dadosExemplo = [
-    {
-      idProduto: "P001",
-      nomePrato: "Feijoada Completa",
-      valorUnitario: "45.90",
-      quantidade: "12",
-      cliente: "Restaurante Silva",
-      numeroNF: "NF-001",
-      dataEmissao: "2023-01-15",
-    },
-    // ... outros itens
-  ];
 
-  dadosExemplo.forEach((item) => db.add(item));
-  carregarTabela();
-}
-*/
+        if (db.getAll().length === 0) {
+          const dadosExemplo = [];
+
+          dadosExemplo.forEach((item) => db.add(item));
+          carregarTabela();
+        }
 
         // Limpa o modal quando é fechado
         $("#cadastroModal").on("hidden.bs.modal", function () {
