@@ -3,2877 +3,1513 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard de Vendas</title>
+    <title>Sistema de Gestão de Vendas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#2563eb",
+              secondary: "#64748b",
+            },
+            borderRadius: {
+              none: "0px",
+              sm: "4px",
+              DEFAULT: "8px",
+              md: "12px",
+              lg: "16px",
+              xl: "20px",
+              "2xl": "24px",
+              "3xl": "32px",
+              full: "9999px",
+              button: "8px",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css"
+      href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap"
       rel="stylesheet"
     />
     <link
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css"
       rel="stylesheet"
     />
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
     <style>
-      .card-kpi {
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        transition: transform 0.3s;
+      :where([class^="ri-"])::before {
+        content: "\f3c2";
       }
-      .card-kpi:hover {
-        transform: translateY(-5px);
-      }
-      .chart-container {
-        height: 350px;
-        margin-bottom: 20px;
-      }
-      .table-responsive {
-        margin-bottom: 20px;
-        /* Definindo altura fixa para a tabela */
-        max-height: 420px; /* Altura que comporta aproximadamente 8 linhas */
-        overflow-y: auto;
-      }
-      #donutChart,
-      #lineChart {
-        width: 100%;
-        height: 100%;
-      }
-      .btn-export {
-        margin-right: 10px;
-      }
-      .loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0.8);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-      }
-      .loading-spinner {
-        width: 50px;
-        height: 50px;
-        border: 5px solid #f3f3f3;
-        border-top: 5px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-      .search-box {
-        position: relative;
-        margin-bottom: 20px;
-      }
-      .search-box .form-control {
-        padding-left: 40px;
-        border-radius: 20px;
-      }
-      .search-icon {
-        position: absolute;
-        left: 15px;
-        top: 10px;
-        color: #6c757d;
-      }
-      .clear-search {
-        position: absolute;
-        right: 15px;
-        top: 10px;
-        color: #6c757d;
-        cursor: pointer;
+      select::-ms-expand {
         display: none;
       }
-      .highlight {
-        background-color: #fff3cd;
+      select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
       }
-      /* Estiliza a barra de rolagem */
-      .table-responsive::-webkit-scrollbar {
-        width: 8px;
+      input[type="number"]::-webkit-inner-spin-button,
+      input[type="number"]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
       }
-      .table-responsive::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-      }
-      .table-responsive::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-      }
-      .table-responsive::-webkit-scrollbar-thumb:hover {
-        background: #555;
-      }
-      /* Fixa o cabeçalho da tabela */
-      #tabelaVendas thead {
-        position: sticky;
-        top: 0;
-        background-color: #fff;
-        z-index: 10;
-      }
-      @media (max-width: 768px) {
-        .chart-container {
-          height: 300px;
-        }
-        .table-responsive {
-          max-height: 350px;
-        }
+      .table-container {
+        overflow-x: auto;
       }
     </style>
   </head>
-  <body>
-    <div class="loading">
-      <div class="loading-spinner"></div>
-    </div>
-
-    <div class="container-fluid py-4">
-      <div class="row mb-4">
-        <div class="col-12">
-          <h1 class="text-center">Dashboard de Vendas</h1>
-        </div>
-      </div>
-
-      <!-- Barra de Pesquisa -->
-      <div class="row mb-3">
-        <div class="col-md-12">
-          <div class="search-box">
-            <i class="fas fa-search search-icon"></i>
-            <input
-              type="text"
-              class="form-control"
-              id="barraPesquisa"
-              placeholder="Pesquisar por Número NF, ID Produto ou Nome do Produto..."
-            />
-            <i class="fas fa-times clear-search" id="limparPesquisa"></i>
+  <body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+          <div class="flex items-center">
+            <span class="font-['Pacifico'] text-2xl text-primary">Rojo - GoMama</span>
+          </div>
+          <div class="flex items-center space-x-4">
+            <button class="text-gray-600 hover:text-gray-900">
+              <div class="w-8 h-8 flex items-center justify-center">
+                <i class="ri-notification-line text-xl"></i>
+              </div>
+            </button>
+            <button class="text-gray-600 hover:text-gray-900">
+              <div class="w-8 h-8 flex items-center justify-center">
+                <i class="ri-user-line text-xl"></i>
+              </div>
+            </button>
           </div>
         </div>
       </div>
+    </nav>
 
-      <!-- Filtros -->
-      <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-          <label for="filtroAno" class="form-label">Ano</label>
-          <select class="form-select" id="filtroAno">
-            <option value="">Todos</option>
-          </select>
-        </div>
-        <div class="col-md-3 mb-3">
-          <label for="filtroMes" class="form-label">Mês</label>
-          <select class="form-select" id="filtroMes">
-            <option value="">Todos</option>
-            <option value="1">Janeiro</option>
-            <option value="2">Fevereiro</option>
-            <option value="3">Março</option>
-            <option value="4">Abril</option>
-            <option value="5">Maio</option>
-            <option value="6">Junho</option>
-            <option value="7">Julho</option>
-            <option value="8">Agosto</option>
-            <option value="9">Setembro</option>
-            <option value="10">Outubro</option>
-            <option value="11">Novembro</option>
-            <option value="12">Dezembro</option>
-          </select>
-        </div>
-        <div class="col-md-3 mb-3">
-          <label for="filtroCliente" class="form-label">Cliente</label>
-          <select class="form-select" id="filtroCliente">
-            <option value="">Todos</option>
-          </select>
-        </div>
-        <div class="col-md-3 mb-3">
-          <label for="filtroProduto" class="form-label">Produto</label>
-          <select class="form-select" id="filtroProduto">
-            <option value="">Todos</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Botões de Ação -->
-      <div class="row mb-4">
-        <div class="col-12 text-end">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div
+        class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4"
+      >
+        <h1 class="text-2xl font-bold text-gray-900">Gestão de Vendas</h1>
+        <div class="flex flex-wrap gap-4">
           <button
-            class="btn btn-success mb-2"
-            data-bs-toggle="modal"
-            data-bs-target="#cadastroModal"
+            id="newSaleBtn"
+            class="bg-primary text-white px-4 py-2 !rounded-button flex items-center space-x-2 whitespace-nowrap cursor-pointer"
           >
-            <i class="fas fa-plus"></i> Novo Registro
+            <div class="w-5 h-5 flex items-center justify-center">
+              <i class="ri-add-line"></i>
+            </div>
+            <span>Nova Venda</span>
           </button>
-          <button class="btn btn-primary btn-export mb-2" id="btnExportar">
-            <i class="fas fa-file-export"></i> Exportar Excel
+          <button
+            id="uploadXMLBtn"
+            class="bg-secondary text-white px-4 py-2 !rounded-button flex items-center space-x-2 whitespace-nowrap cursor-pointer"
+          >
+            <div class="w-5 h-5 flex items-center justify-center">
+              <i class="ri-upload-line"></i>
+            </div>
+            <span>Upload XML</span>
           </button>
-          <button class="btn btn-danger mb-2" id="btnLimparTabela">
-            <i class="fas fa-trash"></i> Limpar Tabela
-          </button>
-        </div>
-      </div>
-
-      <!-- Tabela de Registros -->
-      <div class="row mb-4">
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">Registros de Vendas</h5>
-            </div>
-            <div class="card-body">
-              <div class="table-responsive">
-                <table
-                  class="table table-striped table-hover"
-                  id="tabelaVendas"
-                >
-                  <thead>
-                    <tr>
-                      <th>ID Produto</th>
-                      <th>Nome do Prato</th>
-                      <th>Valor Unitário</th>
-                      <th>Quantidade</th>
-                      <th>Valor Total</th>
-                      <th>Cliente</th>
-                      <th>Número NF</th>
-                      <th>Data Emissão</th>
-                      <th>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- Dados serão carregados dinamicamente -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cards KPI -->
-      <div class="row mb-4">
-        <div class="col-md-6">
-          <div class="card card-kpi bg-info text-white">
-            <div class="card-body">
-              <h5 class="card-title">Total de Vendas</h5>
-              <h2 class="card-text" id="kpiTotalVendas">R$ 0,00</h2>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card card-kpi bg-success text-white">
-            <div class="card-body">
-              <h5 class="card-title">Quantidade Total</h5>
-              <h2 class="card-text" id="kpiQuantidadeTotal">0</h2>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Gráficos -->
-      <div class="row">
-        <div class="col-md-6 mb-4">
-          <div class="card">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">Participação por Cliente</h5>
-            </div>
-            <div class="card-body">
-              <div class="chart-container">
-                <canvas id="donutChart"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6 mb-4">
-          <div class="card">
-            <div class="card-header bg-primary text-white">
-              <h5 class="mb-0">Evolução Mensal de Vendas</h5>
-            </div>
-            <div class="card-body">
-              <div class="chart-container">
-                <canvas id="lineChart"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de Cadastro -->
-    <div
-      class="modal fade"
-      id="cadastroModal"
-      tabindex="-1"
-      aria-labelledby="cadastroModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header bg-primary text-white">
-            <h5 class="modal-title" id="cadastroModalLabel">Novo Registro</h5>
+          <div class="relative" id="exportDropdown">
             <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <form id="formCadastro">
-              <input type="hidden" id="editId" />
-              <div class="mb-3">
-                <label for="idProduto" class="form-label">ID Produto *</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="idProduto"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="nomePrato" class="form-label"
-                  >Nome do Prato *</label
-                >
-                <input
-                  type="text"
-                  class="form-control"
-                  id="nomePrato"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="valorUnitario" class="form-label"
-                  >Valor Unitário *</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="valorUnitario"
-                  step="0.01"
-                  min="0"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="quantidade" class="form-label"
-                  >Quantidade de Saída *</label
-                >
-                <input
-                  type="number"
-                  class="form-control"
-                  id="quantidade"
-                  min="1"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="cliente" class="form-label">Cliente *</label>
-                <input type="text" class="form-control" id="cliente" required />
-              </div>
-              <div class="mb-3">
-                <label for="numeroNF" class="form-label">Número da NF *</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  id="numeroNF"
-                  required
-                />
-              </div>
-              <div class="mb-3">
-                <label for="dataEmissao" class="form-label"
-                  >Data de Emissão *</label
-                >
-                <input
-                  type="date"
-                  class="form-control"
-                  id="dataEmissao"
-                  required
-                />
-              </div>
-            </form>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
+              class="bg-secondary text-white px-4 py-2 !rounded-button flex items-center space-x-2 whitespace-nowrap cursor-pointer"
             >
-              Cancelar
-            </button>
-            <button type="button" class="btn btn-primary" id="btnSalvar">
-              Salvar
+              <div class="w-5 h-5 flex items-center justify-center">
+                <i class="ri-download-line"></i>
+              </div>
+              <span>Exportar</span>
             </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Modal de Confirmação -->
-    <div
-      class="modal fade"
-      id="confirmacaoModal"
-      tabindex="-1"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header bg-danger text-white">
-            <h5 class="modal-title">Confirmação</h5>
-            <button
-              type="button"
-              class="btn-close btn-close-white"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Total de Vendas</h3>
+            <div class="w-8 h-8 flex items-center justify-center text-primary">
+              <i class="ri-line-chart-line text-2xl"></i>
+            </div>
           </div>
-          <div class="modal-body" id="confirmacaoTexto">
-            Tem certeza que deseja realizar esta ação?
+          <p id="totalSalesValue" class="text-3xl font-bold text-gray-900">
+            R$ 158.234,00
+          </p>
+          <div id="totalSalesChart" class="h-32 mt-4"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">
+              Quantidade de Vendas
+            </h3>
+            <div class="w-8 h-8 flex items-center justify-center text-primary">
+              <i class="ri-shopping-bag-line text-2xl"></i>
+            </div>
           </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
+          <p id="salesQuantityValue" class="text-3xl font-bold text-gray-900">
+            1.284
+          </p>
+          <div id="salesQuantityChart" class="h-32 mt-4"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Média por Venda</h3>
+            <div class="w-8 h-8 flex items-center justify-center text-primary">
+              <i class="ri-funds-line text-2xl"></i>
+            </div>
+          </div>
+          <p id="averageSaleValue" class="text-3xl font-bold text-gray-900">
+            R$ 123,24
+          </p>
+          <div id="averageSaleChart" class="h-32 mt-4"></div>
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-gray-900">Lucro Total</h3>
+            <div class="w-8 h-8 flex items-center justify-center text-primary">
+              <i class="ri-money-dollar-circle-line text-2xl"></i>
+            </div>
+          </div>
+          <p id="totalProfitValue" class="text-3xl font-bold text-gray-900">
+            R$ 47.470,20
+          </p>
+          <div id="totalProfitChart" class="h-32 mt-4"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Participação por Cliente
+          </h3>
+          <div id="customerShareChart" class="h-64"></div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow-sm">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            Evolução de Vendas
+          </h3>
+          <div id="salesEvolutionChart" class="h-64"></div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+          <div
+            class="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0"
+          >
+            <h3 class="text-lg font-semibold text-gray-900">
+              Registros de Vendas
+            </h3>
+            <div class="flex items-center space-x-4">
+              <div class="relative">
+                <input
+                  id="searchInput"
+                  type="text"
+                  placeholder="Pesquisar..."
+                  class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                />
+                <div
+                  class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400"
+                >
+                  <i class="ri-search-line"></i>
+                </div>
+              </div>
+              <button class="text-gray-600 hover:text-gray-900">
+                <div class="w-8 h-8 flex items-center justify-center">
+                  <i class="ri-filter-line text-xl"></i>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="w-full">
+            <thead class="bg-gray-50">
+              <tr>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  ID
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Produto
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Valor Unit.
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Qtd.
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Total
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Cliente
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  NF
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Data
+                </th>
+                <th
+                  class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                >
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody
+              id="salesTableBody"
+              class="bg-white divide-y divide-gray-200"
             >
-              Cancelar
-            </button>
-            <button type="button" class="btn btn-danger" id="btnConfirmar">
-              Confirmar
-            </button>
+              <!-- Dados da tabela serão inseridos dinamicamente via JavaScript -->
+            </tbody>
+          </table>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200">
+          <div class="flex justify-between items-center">
+            <div id="paginationInfo" class="text-sm text-gray-700">
+              Mostrando <span class="font-medium">1</span> até
+              <span class="font-medium">10</span> de
+              <span class="font-medium">97</span> resultados
+            </div>
+            <div class="flex space-x-2">
+              <button
+                id="prevPageBtn"
+                class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Anterior
+              </button>
+              <button
+                id="nextPageBtn"
+                class="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Próximo
+              </button>
+            </div>
           </div>
+        </div>
+      </div>
+    </main>
+
+    <div
+      id="newSaleModal"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50"
+    >
+      <div class="bg-white rounded-lg w-full max-w-2xl mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900">Nova Venda</h3>
+        </div>
+        <form id="saleForm" class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Produto</label
+              >
+              <input
+                name="product"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Valor Unitário</label
+              >
+              <input
+                name="unitPrice"
+                type="number"
+                step="0.01"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Quantidade</label
+              >
+              <input
+                name="quantity"
+                type="number"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Cliente</label
+              >
+              <input
+                name="customer"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Nota Fiscal</label
+              >
+              <input
+                name="invoice"
+                type="text"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1"
+                >Data</label
+              >
+              <input
+                name="date"
+                type="date"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                required
+              />
+            </div>
+          </div>
+        </form>
+        <div
+          class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-4"
+        >
+          <button
+            id="cancelSaleBtn"
+            class="px-4 py-2 text-gray-700 hover:text-gray-900 !rounded-button whitespace-nowrap cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            form="saleForm"
+            class="bg-primary text-white px-4 py-2 !rounded-button whitespace-nowrap cursor-pointer"
+          >
+            Salvar
+          </button>
         </div>
       </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-      // Banco de dados simulado usando localStorage
-      // Banco de dados simulado usando localStorage
-      // Banco de dados aprimorado usando localStorage com verificação de integridade
+      // Dados iniciais de vendas com formato mais completo
+      const salesData = [
+        {
+          id: 1234,
+          product: "Feijoada Completa",
+          unitPrice: 45.0,
+          quantity: 2,
+          total: 90.0,
+          customer: "Restaurante Silva",
+          invoice: "NF-123456",
+          date: "2025-03-12",
+          formattedDate: "12/03/2025",
+        },
+        {
+          id: 1235,
+          product: "Picanha Premium",
+          unitPrice: 89.9,
+          quantity: 3,
+          total: 269.7,
+          customer: "Restaurante Silva",
+          invoice: "NF-123457",
+          date: "2025-03-11",
+          formattedDate: "11/03/2025",
+        },
+        {
+          id: 1236,
+          product: "Pão Francês",
+          unitPrice: 0.75,
+          quantity: 100,
+          total: 75.0,
+          customer: "Padaria Central",
+          invoice: "NF-123458",
+          date: "2025-03-10",
+          formattedDate: "10/03/2025",
+        },
+        {
+          id: 1237,
+          product: "Arroz 5kg",
+          unitPrice: 22.5,
+          quantity: 10,
+          total: 225.0,
+          customer: "Mercado São José",
+          invoice: "NF-123459",
+          date: "2025-03-09",
+          formattedDate: "09/03/2025",
+        },
+        {
+          id: 1238,
+          product: "Cerveja 600ml",
+          unitPrice: 8.9,
+          quantity: 24,
+          total: 213.6,
+          customer: "Bar do João",
+          invoice: "NF-123460",
+          date: "2025-03-08",
+          formattedDate: "08/03/2025",
+        },
+      ];
 
-      class Database {
-        constructor() {
-          this.dbName = "dashboardVendas";
-          this.backupKey = "dashboardVendas_backup";
-          this.init();
+      // Variáveis para estatísticas e gráficos
+      let currentPage = 1;
+      const itemsPerPage = 10;
+      const charts = {};
+      const monthNames = [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Abr",
+        "Mai",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Set",
+        "Out",
+        "Nov",
+        "Dez",
+      ];
+
+      // Função para formatar valores monetários
+      function formatCurrency(value) {
+        return new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        }).format(value);
+      }
+
+      // Função para formatar números
+      function formatNumber(value) {
+        return new Intl.NumberFormat("pt-BR").format(value);
+      }
+
+      // Função para atualizar a tabela de vendas
+      function updateSalesTable() {
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const displayData = salesData.slice(start, end);
+
+        const tableBody = document.getElementById("salesTableBody");
+        tableBody.innerHTML = "";
+
+        displayData.forEach((sale) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#${
+                      sale.id
+                    }</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                      sale.product
+                    }</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(
+                      sale.unitPrice
+                    )}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                      sale.quantity
+                    }</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(
+                      sale.total
+                    )}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                      sale.customer
+                    }</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                      sale.invoice
+                    }</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                      sale.formattedDate
+                    }</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div class="flex space-x-2">
+                            <button class="text-primary hover:text-primary-dark" onclick="editSale(${
+                              sale.id
+                            })">
+                                <div class="w-5 h-5 flex items-center justify-center">
+                                    <i class="ri-edit-line"></i>
+                                </div>
+                            </button>
+                            <button class="text-red-600 hover:text-red-700" onclick="deleteSale(${
+                              sale.id
+                            })">
+                                <div class="w-5 h-5 flex items-center justify-center">
+                                    <i class="ri-delete-bin-line"></i>
+                                </div>
+                            </button>
+                        </div>
+                    </td>
+                `;
+          tableBody.appendChild(row);
+        });
+
+        // Atualizar paginação
+        const totalPages = Math.ceil(salesData.length / itemsPerPage);
+        const endItem = Math.min(end, salesData.length);
+        document.getElementById("paginationInfo").innerHTML = `
+                Mostrando <span class="font-medium">${
+                  start + 1
+                }</span> até <span class="font-medium">${endItem}</span> de <span class="font-medium">${
+          salesData.length
+        }</span> resultados
+            `;
+
+        // Atualizar estado dos botões de paginação
+        document.getElementById("prevPageBtn").disabled = currentPage === 1;
+        document.getElementById("nextPageBtn").disabled =
+          currentPage === totalPages;
+      }
+
+      // Função para calcular estatísticas
+      function calculateStats() {
+        // Calcular estatísticas gerais
+        const totalSales = salesData.reduce((sum, sale) => sum + sale.total, 0);
+        const totalQuantity = salesData.length;
+        const averageSale = totalSales / totalQuantity;
+        const totalProfit = totalSales * 0.3; // 30% de margem de lucro para exemplo
+
+        // Atualizar exibição
+        document.getElementById("totalSalesValue").textContent =
+          formatCurrency(totalSales);
+        document.getElementById("salesQuantityValue").textContent =
+          formatNumber(totalQuantity);
+        document.getElementById("averageSaleValue").textContent =
+          formatCurrency(averageSale);
+        document.getElementById("totalProfitValue").textContent =
+          formatCurrency(totalProfit);
+
+        // Preparar dados para gráficos
+        const salesByMonth = new Array(12).fill(0);
+        const quantityByMonth = new Array(12).fill(0);
+
+        // Agrupar vendas por mês
+        salesData.forEach((sale) => {
+          const date = new Date(sale.date);
+          const month = date.getMonth();
+          salesByMonth[month] += sale.total;
+          quantityByMonth[month]++;
+        });
+
+        // Agrupar vendas por cliente
+        const customerData = {};
+        salesData.forEach((sale) => {
+          if (!customerData[sale.customer]) {
+            customerData[sale.customer] = 0;
+          }
+          customerData[sale.customer] += sale.total;
+        });
+
+        // Preparar dados para o gráfico de participação por cliente
+        const customerShareData = Object.entries(customerData).map(
+          ([name, value]) => ({ name, value })
+        );
+
+        // Ordenar por valor e limitar a 5 principais
+        customerShareData.sort((a, b) => b.value - a.value);
+        const topCustomers = customerShareData.slice(0, 4);
+
+        // Adicionar "Outros" se necessário
+        if (customerShareData.length > 4) {
+          const othersValue = customerShareData
+            .slice(4)
+            .reduce((sum, item) => sum + item.value, 0);
+          topCustomers.push({ name: "Outros", value: othersValue });
         }
 
-        init() {
-          try {
-            // Verifica se existe dados no localStorage
-            if (!localStorage.getItem(this.dbName)) {
-              localStorage.setItem(this.dbName, JSON.stringify([]));
-              // Cria backup inicial
-              localStorage.setItem(this.backupKey, JSON.stringify([]));
-            } else {
-              // Verifica integridade dos dados
-              const data = JSON.parse(localStorage.getItem(this.dbName));
-              if (!Array.isArray(data)) {
-                // Se os dados estiverem corrompidos, tenta restaurar do backup
-                console.warn(
-                  "Dados corrompidos, tentando restaurar do backup..."
-                );
-                const backup = localStorage.getItem(this.backupKey);
-                if (backup) {
-                  localStorage.setItem(this.dbName, backup);
-                } else {
-                  // Se não houver backup, reinicia o banco de dados
-                  localStorage.setItem(this.dbName, JSON.stringify([]));
-                }
-              }
-            }
-          } catch (error) {
-            console.error("Erro ao inicializar o banco de dados:", error);
-            // Reinicia o banco de dados em caso de erro
-            localStorage.setItem(this.dbName, JSON.stringify([]));
-            localStorage.setItem(this.backupKey, JSON.stringify([]));
+        return {
+          totalSales,
+          totalQuantity,
+          averageSale,
+          totalProfit,
+          salesByMonth,
+          quantityByMonth,
+          customerShareData: topCustomers,
+        };
+      }
+
+      // Função para inicializar os gráficos
+      function initCharts() {
+        const elements = [
+          "totalSalesChart",
+          "salesQuantityChart",
+          "averageSaleChart",
+          "totalProfitChart",
+          "customerShareChart",
+          "salesEvolutionChart",
+        ];
+
+        // Inicializar instâncias do ECharts
+        elements.forEach((id) => {
+          const element = document.getElementById(id);
+          if (element) {
+            charts[id] = echarts.init(element);
           }
+        });
+
+        // Atualizar gráficos com dados iniciais
+        updateCharts();
+      }
+
+      // Função para atualizar gráficos com dados atuais
+      function updateCharts() {
+        const stats = calculateStats();
+
+        // Opções comuns para os gráficos de linha pequenos
+        const smallLineChartOptions = (data) => ({
+          animation: false,
+          grid: { top: 5, right: 5, bottom: 5, left: 5 },
+          xAxis: {
+            show: false,
+            type: "category",
+            data: monthNames,
+          },
+          yAxis: { show: false },
+          series: [
+            {
+              type: "line",
+              data: data,
+              smooth: true,
+              showSymbol: false,
+              lineStyle: { color: "rgba(37, 99, 235, 1)" },
+              areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                  {
+                    offset: 0,
+                    color: "rgba(37, 99, 235, 0.3)",
+                  },
+                  {
+                    offset: 1,
+                    color: "rgba(37, 99, 235, 0.1)",
+                  },
+                ]),
+              },
+            },
+          ],
+        });
+
+        // Gráfico de total de vendas
+        if (charts.totalSalesChart) {
+          charts.totalSalesChart.setOption(
+            smallLineChartOptions(stats.salesByMonth)
+          );
         }
 
-        getAll() {
-          try {
-            return JSON.parse(localStorage.getItem(this.dbName)) || [];
-          } catch (error) {
-            console.error("Erro ao obter dados:", error);
-            return [];
-          }
+        // Gráfico de quantidade de vendas
+        if (charts.salesQuantityChart) {
+          charts.salesQuantityChart.setOption(
+            smallLineChartOptions(stats.quantityByMonth)
+          );
         }
 
-        add(item) {
-          try {
-            const data = this.getAll();
-            item.id = Date.now(); // ID único baseado no timestamp
-            data.push(item);
-
-            this._saveData(data);
-            return item;
-          } catch (error) {
-            console.error("Erro ao adicionar item:", error);
-            return null;
-          }
+        // Gráfico de média por venda (usando uma versão simplificada)
+        if (charts.averageSaleChart) {
+          const avgByMonth = stats.salesByMonth.map((total, i) =>
+            stats.quantityByMonth[i] ? total / stats.quantityByMonth[i] : 0
+          );
+          charts.averageSaleChart.setOption(smallLineChartOptions(avgByMonth));
         }
 
-        update(id, newData) {
-          try {
-            const data = this.getAll();
-            const index = data.findIndex((item) => item.id === id);
-            if (index !== -1) {
-              data[index] = { ...data[index], ...newData };
-              this._saveData(data);
-              return data[index];
-            }
-            return null;
-          } catch (error) {
-            console.error("Erro ao atualizar item:", error);
-            return null;
-          }
+        // Gráfico de lucro total (30% de margem para exemplo)
+        if (charts.totalProfitChart) {
+          const profitByMonth = stats.salesByMonth.map((total) => total * 0.3);
+          charts.totalProfitChart.setOption(
+            smallLineChartOptions(profitByMonth)
+          );
         }
 
-        delete(id) {
-          try {
-            const data = this.getAll();
-            const newData = data.filter((item) => item.id !== id);
-            this._saveData(newData);
-            return true;
-          } catch (error) {
-            console.error("Erro ao excluir item:", error);
-            return false;
-          }
+        // Gráfico de participação por cliente
+        if (charts.customerShareChart) {
+          charts.customerShareChart.setOption({
+            animation: false,
+            tooltip: {
+              trigger: "item",
+              formatter: "{b}: {c} ({d}%)",
+            },
+            legend: {
+              bottom: "0%",
+              left: "center",
+              textStyle: {
+                color: "#64748b",
+              },
+            },
+            series: [
+              {
+                type: "pie",
+                radius: ["40%", "70%"],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                  borderRadius: 5,
+                  borderColor: "#fff",
+                  borderWidth: 2,
+                },
+                label: {
+                  show: false,
+                },
+                emphasis: {
+                  label: {
+                    show: true,
+                    fontSize: "14",
+                    fontWeight: "bold",
+                  },
+                },
+                labelLine: {
+                  show: false,
+                },
+                data: stats.customerShareData,
+              },
+            ],
+          });
         }
 
-        clear() {
-          try {
-            this._saveData([]);
-            return true;
-          } catch (error) {
-            console.error("Erro ao limpar dados:", error);
-            return false;
-          }
-        }
+        // Gráfico de evolução de vendas
+        if (charts.salesEvolutionChart) {
+          // Formatar valores para exibição
+          const formattedSalesByMonth = stats.salesByMonth.map((value) =>
+            value ? value.toFixed(2) : 0
+          );
 
-        // Método privado para salvar dados com backup
-        _saveData(data) {
-          try {
-            const jsonData = JSON.stringify(data);
-
-            // Salva os dados principais
-            localStorage.setItem(this.dbName, jsonData);
-
-            // Cria um backup dos dados
-            localStorage.setItem(this.backupKey, jsonData);
-
-            // Força o salvamento síncrono no localStorage
-            localStorage.getItem(this.dbName);
-
-            return true;
-          } catch (error) {
-            console.error("Erro ao salvar dados:", error);
-            return false;
-          }
+          charts.salesEvolutionChart.setOption({
+            animation: false,
+            grid: { top: 40, right: 20, bottom: 80, left: 70 },
+            tooltip: {
+              trigger: "axis",
+              formatter: function (params) {
+                return `${params[0].name}: ${formatCurrency(params[0].value)}`;
+              },
+            },
+            xAxis: {
+              type: "category",
+              data: monthNames,
+              axisLine: { lineStyle: { color: "#E5E7EB" } },
+              axisLabel: {
+                rotate: 45,
+                color: "#64748b",
+              },
+            },
+            yAxis: {
+              type: "value",
+              splitLine: { lineStyle: { color: "#E5E7EB" } },
+              axisLabel: {
+                formatter: (value) => formatCurrency(value),
+                color: "#64748b",
+              },
+            },
+            series: [
+              {
+                data: formattedSalesByMonth,
+                type: "bar",
+                barWidth: "60%",
+                itemStyle: {
+                  color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: "#2563eb" },
+                    { offset: 1, color: "#3b82f6" },
+                  ]),
+                },
+              },
+            ],
+          });
         }
       }
 
-      // Inicializa a aplicação
-      $(document).ready(function () {
-        const db = new Database();
-        let donutChart, lineChart;
-        let currentEditId = null;
-        let dadosFiltrados = [];
-        let termoPesquisa = "";
-
-        // Funções de formatação
-        function formatarData(dataISO) {
-          if (!dataISO) return "";
-          const data = new Date(dataISO);
-          return data.toLocaleDateString("pt-BR");
+      // Eventos para paginação
+      document.getElementById("prevPageBtn").addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          updateSalesTable();
         }
+      });
 
-        function formatarMoeda(valor) {
-          return valor.toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-          });
+      document.getElementById("nextPageBtn").addEventListener("click", () => {
+        const totalPages = Math.ceil(salesData.length / itemsPerPage);
+        if (currentPage < totalPages) {
+          currentPage++;
+          updateSalesTable();
         }
+      });
 
-        // Carrega dados na tabela
-        function carregarTabela(dados = null) {
-          const registros = dados || db.getAll();
-          dadosFiltrados = registros;
+      // Eventos para modal de nova venda
+      document.getElementById("newSaleBtn").addEventListener("click", () => {
+        document.getElementById("newSaleModal").classList.remove("hidden");
+        document.getElementById("newSaleModal").classList.add("flex");
+        document.getElementById("saleForm").reset();
 
-          const tbody = $("#tabelaVendas tbody");
-          tbody.empty();
+        // Preencher data atual
+        const today = new Date().toISOString().split("T")[0];
+        document.querySelector('input[name="date"]').value = today;
+      });
 
-          if (registros.length === 0) {
-            tbody.append(`
-          <tr>
-              <td colspan="9" class="text-center">Nenhum registro encontrado</td>
-          </tr>
-      `);
-            // Mesmo sem registros, precisamos atualizar KPIs e gráficos para ficarem vazios
-            atualizarKPIs([]);
-            atualizarGraficos([]);
-            atualizarFiltros([]);
-            return;
-          }
+      document.getElementById("cancelSaleBtn").addEventListener("click", () => {
+        document.getElementById("newSaleModal").classList.add("hidden");
+        document.getElementById("newSaleModal").classList.remove("flex");
+      });
 
-          registros.forEach((registro) => {
-            const valorTotal = (
-              parseFloat(registro.valorUnitario) * parseInt(registro.quantidade)
-            ).toFixed(2);
+      // Salvar nova venda
+      document.getElementById("saleForm").addEventListener("submit", (e) => {
+        e.preventDefault();
 
-            // Prepara o HTML com destaque dos termos pesquisados
-            let idProdutoHTML = registro.idProduto;
-            let nomePratoHTML = registro.nomePrato || "";
-            let numeroNFHTML = registro.numeroNF;
+        // Obter dados do formulário
+        const formData = new FormData(e.target);
+        const product = formData.get("product");
+        const unitPrice = parseFloat(formData.get("unitPrice"));
+        const quantity = parseInt(formData.get("quantity"));
+        const customer = formData.get("customer");
+        const invoice = formData.get("invoice");
+        const date = formData.get("date");
 
-            if (termoPesquisa) {
-              const regex = new RegExp(termoPesquisa, "gi");
+        // Calcular total
+        const total = unitPrice * quantity;
 
-              if (registro.idProduto.match(regex)) {
-                idProdutoHTML = registro.idProduto.replace(
-                  regex,
-                  (match) => `<span class="highlight">${match}</span>`
-                );
-              }
+        // Formatar data para exibição
+        const dateObj = new Date(date);
+        const formattedDate = `${String(dateObj.getDate()).padStart(
+          2,
+          "0"
+        )}/${String(dateObj.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}/${dateObj.getFullYear()}`;
 
-              if (registro.nomePrato && registro.nomePrato.match(regex)) {
-                nomePratoHTML = registro.nomePrato.replace(
-                  regex,
-                  (match) => `<span class="highlight">${match}</span>`
-                );
-              }
+        // Gerar ID único
+        const id = Math.max(0, ...salesData.map((s) => s.id)) + 1;
 
-              if (registro.numeroNF.match(regex)) {
-                numeroNFHTML = registro.numeroNF.replace(
-                  regex,
-                  (match) => `<span class="highlight">${match}</span>`
-                );
-              }
-            }
-
-            tbody.append(`
-          <tr data-id="${registro.id}">
-              <td>${idProdutoHTML}</td>
-              <td>${nomePratoHTML}</td>
-              <td>${formatarMoeda(parseFloat(registro.valorUnitario))}</td>
-              <td>${registro.quantidade}</td>
-              <td>${formatarMoeda(parseFloat(valorTotal))}</td>
-              <td>${registro.cliente}</td>
-              <td>${numeroNFHTML}</td>
-              <td>${formatarData(registro.dataEmissao)}</td>
-              <td>
-                  <button class="btn btn-sm btn-warning btn-editar" data-id="${
-                    registro.id
-                  }">
-                      <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-sm btn-danger btn-excluir" data-id="${
-                    registro.id
-                  }">
-                      <i class="fas fa-trash"></i>
-                  </button>
-              </td>
-          </tr>
-      `);
-          });
-
-          atualizarKPIs(registros);
-          atualizarGraficos(registros);
-          atualizarFiltros(registros);
-        }
-
-        // Atualiza os KPIs
-        function atualizarKPIs(dados) {
-          let totalVendas = 0;
-          let quantidadeTotal = 0;
-
-          dados.forEach((registro) => {
-            const valorTotal =
-              parseFloat(registro.valorUnitario) *
-              parseInt(registro.quantidade);
-            totalVendas += valorTotal;
-            quantidadeTotal += parseInt(registro.quantidade);
-          });
-
-          $("#kpiTotalVendas").text(formatarMoeda(totalVendas));
-          $("#kpiQuantidadeTotal").text(quantidadeTotal);
-        }
-
-        // Atualiza os gráficos
-        function atualizarGraficos(dados) {
-          // Gráfico de Rosca - Participação por Cliente
-          const clientesData = {};
-          dados.forEach((registro) => {
-            const valorTotal =
-              parseFloat(registro.valorUnitario) *
-              parseInt(registro.quantidade);
-            if (clientesData[registro.cliente]) {
-              clientesData[registro.cliente] += valorTotal;
-            } else {
-              clientesData[registro.cliente] = valorTotal;
-            }
-          });
-
-          const clientesLabels = Object.keys(clientesData);
-          const clientesValues = Object.values(clientesData);
-
-          // Gera cores aleatórias para o gráfico
-          const backgroundColors = [
-            "#FF6384",
-            "#36A2EB",
-            "#FFCE56",
-            "#4BC0C0",
-            "#9966FF",
-            "#FF9F40",
-          ];
-          // Gráfico de Evolução Mensal
-          const vendasPorMes = {
-            1: 0,
-            2: 0,
-            3: 0,
-            4: 0,
-            5: 0,
-            6: 0,
-            7: 0,
-            8: 0,
-            9: 0,
-            10: 0,
-            11: 0,
-            12: 0,
-          };
-
-          dados.forEach((registro) => {
-            if (registro.dataEmissao) {
-              const data = new Date(registro.dataEmissao);
-              const mes = data.getMonth() + 1;
-              const valorTotal =
-                parseFloat(registro.valorUnitario) *
-                parseInt(registro.quantidade);
-              vendasPorMes[mes] += valorTotal;
-            }
-          });
-
-          const mesesLabels = [
-            "Janeiro",
-            "Fevereiro",
-            "Março",
-            "Abril",
-            "Maio",
-            "Junho",
-            "Julho",
-            "Agosto",
-            "Setembro",
-            "Outubro",
-            "Novembro",
-            "Dezembro",
-          ];
-          const vendasValues = Object.values(vendasPorMes);
-
-          // Atualiza ou cria o gráfico de rosca
-          if (donutChart) {
-            // Destruir e recriar o gráfico para evitar problemas com dados persistentes
-            donutChart.destroy();
-            const ctxDonut = document
-              .getElementById("donutChart")
-              .getContext("2d");
-            donutChart = new Chart(ctxDonut, {
-              type: "doughnut",
-              data: {
-                labels: clientesLabels,
-                datasets: [
-                  {
-                    data: clientesValues,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 1,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  title: {
-                    display: true,
-                    text: "Participação por Cliente", // Título do gráfico
-                    font: { size: 18, weight: "bold" },
-                    color: "#333",
-                  },
-                  legend: {
-                    position: "right", // Posição da legenda
-                    labels: {
-                      font: { size: 14, family: "Arial, sans-serif" }, // Tamanho e fonte da legenda
-                      color: "#333", // Cor do texto da legenda
-                      boxWidth: 20, // Tamanho do quadrado de cor ao lado do texto
-                    },
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        const value = context.raw;
-                        const total = context.dataset.data.reduce(
-                          (a, b) => a + b,
-                          0
-                        );
-                        const percentage = Math.round((value / total) * 100);
-                        return `${context.label}: ${formatarMoeda(
-                          value
-                        )} (${percentage}%)`;
-                      },
-                    },
-                    backgroundColor: "#fff", // Fundo do tooltip
-                    titleColor: "#333", // Cor do título do tooltip
-                    bodyColor: "#333", // Cor do corpo do tooltip
-                    borderColor: "#ccc", // Borda do tooltip
-                    borderWidth: 1, // Largura da borda
-                  },
-                },
-                animation: {
-                  animateScale: true, // Animação de escala
-                  animateRotate: true, // Animação de rotação
-                },
-                onClick: function (event, elements) {
-                  if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const cliente = clientesLabels[index];
-                    $("#filtroCliente").val(cliente);
-                    aplicarFiltros();
-                  }
-                },
-              },
-            });
-          } else {
-            const ctxDonut = document
-              .getElementById("donutChart")
-              .getContext("2d");
-            donutChart = new Chart(ctxDonut, {
-              type: "doughnut",
-              data: {
-                labels: clientesLabels,
-                datasets: [
-                  {
-                    data: clientesValues,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 1,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                  legend: {
-                    position: "right",
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        const value = context.raw;
-                        const total = context.dataset.data.reduce(
-                          (a, b) => a + b,
-                          0
-                        );
-                        const percentage = Math.round((value / total) * 100);
-                        return `${context.label}: ${formatarMoeda(
-                          value
-                        )} (${percentage}%)`;
-                      },
-                    },
-                  },
-                },
-                onClick: function (event, elements) {
-                  if (elements.length > 0) {
-                    const index = elements[0].index;
-                    const cliente = clientesLabels[index];
-                    $("#filtroCliente").val(cliente);
-                    aplicarFiltros();
-                  }
-                },
-              },
-            });
-          }
-
-          // Atualiza ou cria o gráfico de linha
-          if (lineChart) {
-            // Destruir e recriar o gráfico para evitar problemas com dados persistentes
-            lineChart.destroy();
-            const ctxLine = document
-              .getElementById("lineChart")
-              .getContext("2d");
-            lineChart = new Chart(ctxLine, {
-              type: "line",
-              data: {
-                labels: mesesLabels,
-                datasets: [
-                  {
-                    label: "Vendas Mensais",
-                    data: vendasValues,
-                    backgroundColor: "rgba(54, 162, 235, 0.2)",
-                    borderColor: "rgba(54, 162, 235, 1)",
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  x: {
-                    grid: { display: false }, // Remove as linhas de grade no eixo X
-                    ticks: { color: "#333", font: { size: 12 } }, // Estilo dos rótulos do eixo X
-                  },
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      callback: function (value) {
-                        return formatarMoeda(value); // Formata os valores do eixo Y como moeda
-                      },
-                      color: "#333", // Cor dos rótulos do eixo Y
-                      font: { size: 12 },
-                    },
-                    grid: { color: "#eee" }, // Cor das linhas de grade no eixo Y
-                  },
-                },
-                plugins: {
-                  legend: {
-                    labels: {
-                      font: { size: 14, family: "Arial, sans-serif" }, // Tamanho e fonte da legenda
-                      color: "#333", // Cor do texto da legenda
-                    },
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        const value = context.raw;
-                        const total = context.dataset.data.reduce(
-                          (a, b) => a + b,
-                          0
-                        );
-                        const percentage = Math.round((value / total) * 100);
-                        return `${context.label}: ${formatarMoeda(
-                          value
-                        )} (${percentage}%)`;
-                      },
-                    },
-                    enabled: true,
-                    mode: "index",
-                    intersect: false,
-                  },
-                },
-                animation: {
-                  duration: 1000, // Duração da animação em milissegundos
-                  easing: "easeInOutQuad", // Tipo de animação
-                },
-              },
-            });
-          } else {
-            const ctxLine = document
-              .getElementById("lineChart")
-              .getContext("2d");
-            lineChart = new Chart(ctxLine, {
-              type: "line",
-              data: {
-                labels: mesesLabels,
-                datasets: [
-                  {
-                    label: "Vendas Mensais",
-                    data: vendasValues,
-                    backgroundColor: "rgba(54, 162, 235, 0.2)",
-                    borderColor: "rgba(54, 162, 235, 1)",
-                    borderWidth: 2,
-                    tension: 0.3,
-                    fill: true,
-                  },
-                ],
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  x: {
-                    grid: { display: false }, // Remove as linhas de grade no eixo X
-                    ticks: { color: "#333", font: { size: 12 } }, // Estilo dos rótulos do eixo X
-                  },
-                  y: {
-                    beginAtZero: true,
-                    ticks: {
-                      callback: function (value) {
-                        return formatarMoeda(value); // Formata os valores do eixo Y como moeda
-                      },
-                      color: "#333", // Cor dos rótulos do eixo Y
-                      font: { size: 12 },
-                    },
-                    grid: { color: "#eee" }, // Cor das linhas de grade no eixo Y
-                  },
-                },
-                plugins: {
-                  legend: {
-                    labels: {
-                      font: { size: 14, family: "Arial, sans-serif" }, // Tamanho e fonte da legenda
-                      color: "#333", // Cor do texto da legenda
-                    },
-                  },
-                  tooltip: {
-                    callbacks: {
-                      label: function (context) {
-                        const value = context.raw;
-                        const total = context.dataset.data.reduce(
-                          (a, b) => a + b,
-                          0
-                        );
-                        const percentage = Math.round((value / total) * 100);
-                        return `${context.label}: ${formatarMoeda(
-                          value
-                        )} (${percentage}%)`;
-                      },
-                    },
-                    enabled: true,
-                    mode: "index",
-                    intersect: false,
-                  },
-                },
-                animation: {
-                  duration: 1000, // Duração da animação em milissegundos
-                  easing: "easeInOutQuad", // Tipo de animação
-                },
-              },
-            });
-          }
-        }
-
-        // Atualiza os filtros
-        function atualizarFiltros(dados) {
-          // Obtém valores únicos para cada filtro
-          const anos = [
-            ...new Set(
-              dados
-                .map((item) => {
-                  return item.dataEmissao
-                    ? new Date(item.dataEmissao).getFullYear()
-                    : null;
-                })
-                .filter(Boolean)
-            ),
-          ];
-
-          const clientes = [...new Set(dados.map((item) => item.cliente))];
-          const produtos = [...new Set(dados.map((item) => item.idProduto))];
-
-          // Limpa e recria as opções dos filtros
-          const filtroAno = $("#filtroAno");
-          const filtroCliente = $("#filtroCliente");
-          const filtroProduto = $("#filtroProduto");
-
-          // Preserva a opção "Todos"
-          const anoSelecionado = filtroAno.val();
-          const clienteSelecionado = filtroCliente.val();
-          const produtoSelecionado = filtroProduto.val();
-
-          filtroAno.html('<option value="">Todos</option>');
-          filtroCliente.html('<option value="">Todos</option>');
-          filtroProduto.html('<option value="">Todos</option>');
-
-          // Adiciona as opções
-          anos
-            .sort((a, b) => b - a)
-            .forEach((ano) => {
-              filtroAno.append(`<option value="${ano}">${ano}</option>`);
-            });
-
-          clientes.sort().forEach((cliente) => {
-            filtroCliente.append(
-              `<option value="${cliente}">${cliente}</option>`
-            );
-          });
-
-          produtos.sort().forEach((produto) => {
-            filtroProduto.append(
-              `<option value="${produto}">${produto}</option>`
-            );
-          });
-
-          // Restaura a seleção anterior se o valor ainda existir nas opções disponíveis
-          if (anoSelecionado && anos.includes(parseInt(anoSelecionado))) {
-            filtroAno.val(anoSelecionado);
-          } else {
-            filtroAno.val("");
-          }
-
-          if (clienteSelecionado && clientes.includes(clienteSelecionado)) {
-            filtroCliente.val(clienteSelecionado);
-          } else {
-            filtroCliente.val("");
-          }
-
-          if (produtoSelecionado && produtos.includes(produtoSelecionado)) {
-            filtroProduto.val(produtoSelecionado);
-          } else {
-            filtroProduto.val("");
-          }
-        }
-
-        // Aplica os filtros
-        function aplicarFiltros() {
-          const anoSelecionado = $("#filtroAno").val();
-          const mesSelecionado = $("#filtroMes").val();
-          const clienteSelecionado = $("#filtroCliente").val();
-          const produtoSelecionado = $("#filtroProduto").val();
-
-          let dados = db.getAll();
-
-          if (anoSelecionado) {
-            dados = dados.filter((item) => {
-              const data = new Date(item.dataEmissao);
-              return data.getFullYear() == anoSelecionado;
-            });
-          }
-
-          if (mesSelecionado) {
-            dados = dados.filter((item) => {
-              const data = new Date(item.dataEmissao);
-              return data.getMonth() + 1 == mesSelecionado;
-            });
-          }
-
-          if (clienteSelecionado) {
-            dados = dados.filter((item) => item.cliente === clienteSelecionado);
-          }
-
-          if (produtoSelecionado) {
-            dados = dados.filter(
-              (item) => item.idProduto === produtoSelecionado
-            );
-          }
-
-          // Aplica a pesquisa textual, se houver
-          if (termoPesquisa) {
-            dados = filtrarPorPesquisa(dados, termoPesquisa);
-          }
-
-          carregarTabela(dados);
-        }
-
-        // Função de pesquisa textual
-        function filtrarPorPesquisa(dados, termo) {
-          if (!termo) return dados;
-
-          const termoLowerCase = termo.toLowerCase();
-          return dados.filter(
-            (item) =>
-              (item.numeroNF &&
-                item.numeroNF.toLowerCase().includes(termoLowerCase)) ||
-              (item.idProduto &&
-                item.idProduto.toLowerCase().includes(termoLowerCase)) ||
-              (item.nomePrato &&
-                item.nomePrato.toLowerCase().includes(termoLowerCase))
-          );
-        }
-
-        // Modifique a função que salva o formulário (o evento do botão salvar)
-        $("#btnSalvar").click(function () {
-          if (!validarFormulario()) return;
-
-          // Pega o valor do campo numeroNF
-          let numeroNF = $("#numeroNF").val();
-
-          // Verifica se já começa com "NF-", senão adiciona
-          if (!numeroNF.startsWith("NF-")) {
-            numeroNF = "NF-" + numeroNF;
-          }
-
-          const novoRegistro = {
-            idProduto: $("#idProduto").val(),
-            nomePrato: $("#nomePrato").val(),
-            valorUnitario: $("#valorUnitario").val(),
-            quantidade: $("#quantidade").val(),
-            cliente: $("#cliente").val(),
-            numeroNF: numeroNF, // Usa o valor já formatado
-            dataEmissao: $("#dataEmissao").val(),
-          };
-
-          if (currentEditId) {
-            db.update(currentEditId, novoRegistro);
-          } else {
-            db.add(novoRegistro);
-          }
-
-          $("#cadastroModal").modal("hide");
-          limparFormulario();
-          carregarTabela();
+        // Adicionar nova venda
+        salesData.unshift({
+          id,
+          product,
+          unitPrice,
+          quantity,
+          total,
+          customer,
+          invoice,
+          date,
+          formattedDate,
         });
 
-        // Validação do formulário
-        function validarFormulario() {
-          const campos = [
-            "idProduto",
-            "nomePrato",
-            "valorUnitario",
-            "quantidade",
-            "cliente",
-            "numeroNF",
-            "dataEmissao",
-          ];
-          let valido = true;
+        // Atualizar tabela e gráficos
+        updateSalesTable();
+        updateCharts();
 
-          campos.forEach((campo) => {
-            const valor = $(`#${campo}`).val();
-            if (!valor) {
-              $(`#${campo}`).addClass("is-invalid");
-              valido = false;
-            } else {
-              $(`#${campo}`).removeClass("is-invalid");
-            }
-          });
+        // Fechar modal
+        document.getElementById("newSaleModal").classList.add("hidden");
+        document.getElementById("newSaleModal").classList.remove("flex");
+      });
 
-          return valido;
-        }
+      // Funções para editar e excluir vendas
+      window.editSale = function (id) {
+        const sale = salesData.find((s) => s.id === id);
+        if (!sale) return;
 
-        // Limpar formulário
-        function limparFormulario() {
-          $("#formCadastro")[0].reset();
-          $("#editId").val("");
-          currentEditId = null;
-        }
+        // Abrir modal e preencher dados
+        document.getElementById("newSaleModal").classList.remove("hidden");
+        document.getElementById("newSaleModal").classList.add("flex");
 
-        // Botão editar
-        $(document).on("click", ".btn-editar", function () {
-          const id = parseInt($(this).data("id"));
-          const registro = db.getAll().find((item) => item.id === id);
+        // Preencher formulário
+        document.querySelector('input[name="product"]').value = sale.product;
+        document.querySelector('input[name="unitPrice"]').value =
+          sale.unitPrice;
+        document.querySelector('input[name="quantity"]').value = sale.quantity;
+        document.querySelector('input[name="customer"]').value = sale.customer;
+        document.querySelector('input[name="invoice"]').value = sale.invoice;
+        document.querySelector('input[name="date"]').value = sale.date;
 
-          if (registro) {
-            $("#idProduto").val(registro.idProduto);
-            $("#nomePrato").val(registro.nomePrato);
-            $("#valorUnitario").val(registro.valorUnitario);
-            $("#quantidade").val(registro.quantidade);
-            $("#cliente").val(registro.cliente);
-            $("#numeroNF").val(registro.numeroNF);
-            $("#dataEmissao").val(registro.dataEmissao);
-            $("#editId").val(registro.id);
-            currentEditId = registro.id;
+        // Alterar envio do formulário para edição
+        document.getElementById("saleForm").onsubmit = function (e) {
+          e.preventDefault();
 
-            $("#cadastroModalLabel").text("Editar Registro");
-            $("#cadastroModal").modal("show");
+          // Obter dados atualizados
+          const formData = new FormData(e.target);
+
+          // Atualizar venda
+          sale.product = formData.get("product");
+          sale.unitPrice = parseFloat(formData.get("unitPrice"));
+          sale.quantity = parseInt(formData.get("quantity"));
+          sale.customer = formData.get("customer");
+          sale.invoice = formData.get("invoice");
+          sale.date = formData.get("date");
+
+          // Recalcular total
+          sale.total = sale.unitPrice * sale.quantity;
+
+          // Atualizar data formatada
+          const dateObj = new Date(sale.date);
+          sale.formattedDate = `${String(dateObj.getDate()).padStart(
+            2,
+            "0"
+          )}/${String(dateObj.getMonth() + 1).padStart(
+            2,
+            "0"
+          )}/${dateObj.getFullYear()}`;
+
+          // Atualizar tabela e gráficos
+          updateSalesTable();
+          updateCharts();
+
+          // Fechar modal
+          document.getElementById("newSaleModal").classList.add("hidden");
+          document.getElementById("newSaleModal").classList.remove("flex");
+
+          // Restaurar evento original
+          document.getElementById("saleForm").onsubmit = null;
+        };
+      };
+
+      window.deleteSale = function (id) {
+        if (confirm("Tem certeza que deseja excluir esta venda?")) {
+          const index = salesData.findIndex((s) => s.id === id);
+          if (index !== -1) {
+            salesData.splice(index, 1);
+
+            // Atualizar tabela e gráficos
+            updateSalesTable();
+            updateCharts();
           }
-        });
+        }
+      };
 
-        // Botão excluir
-        $(document).on("click", ".btn-excluir", function () {
-          const id = parseInt($(this).data("id"));
-          $("#confirmacaoTexto").html(
-            "Tem certeza que deseja excluir este registro?"
+      // Filtro de pesquisa
+      document.getElementById("searchInput").addEventListener("input", (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+
+        // Filtrar dados
+        if (searchTerm) {
+          const filteredData = salesData.filter(
+            (sale) =>
+              sale.product.toLowerCase().includes(searchTerm) ||
+              sale.customer.toLowerCase().includes(searchTerm) ||
+              sale.invoice.toLowerCase().includes(searchTerm)
           );
 
-          $("#btnConfirmar")
-            .off()
-            .on("click", function () {
-              db.delete(id);
-              $("#confirmacaoModal").modal("hide");
+          // Exibir resultados filtrados
+          const tableBody = document.getElementById("salesTableBody");
+          tableBody.innerHTML = "";
 
-              // Recarregar a tabela e atualizar os gráficos
-              carregarTabela();
-            });
+          filteredData.forEach((sale) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">#${
+                          sale.id
+                        }</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                          sale.product
+                        }</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(
+                          sale.unitPrice
+                        )}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                          sale.quantity
+                        }</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(
+                          sale.total
+                        )}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                          sale.customer
+                        }</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                          sale.invoice
+                        }</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${
+                          sale.formattedDate
+                        }</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div class="flex space-x-2">
+                                <button class="text-primary hover:text-primary-dark" onclick="editSale(${
+                                  sale.id
+                                })">
+                                    <div class="w-5 h-5 flex items-center justify-center">
+                                        <i class="ri-edit-line"></i>
+                                    </div>
+                                </button>
+                                <button class="text-red-600 hover:text-red-700" onclick="deleteSale(${
+                                  sale.id
+                                })">
+                                    <div class="w-5 h-5 flex items-center justify-center">
+                                        <i class="ri-delete-bin-line"></i>
+                                    </div>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+            tableBody.appendChild(row);
+          });
 
-          $("#confirmacaoModal").modal("show");
+          // Atualizar informações de paginação
+          document.getElementById("paginationInfo").innerHTML = `
+                    Mostrando <span class="font-medium">${filteredData.length}</span> resultados filtrados
+                `;
+
+          // Desabilitar botões de paginação durante a pesquisa
+          document.getElementById("prevPageBtn").disabled = true;
+          document.getElementById("nextPageBtn").disabled = true;
+        } else {
+          // Restaurar exibição normal
+          currentPage = 1;
+          updateSalesTable();
+        }
+      });
+
+      // Funcionalidade de exportação
+      document
+        .getElementById("exportDropdown")
+        .addEventListener("click", () => {
+          // Simulação de exportação
+         // alert("Funcionalidade de exportação seria implementada aqui");
         });
 
-        // Botão limpar tabela
-        $("#btnLimparTabela").click(function () {
-          $("#confirmacaoTexto").html(
-            "Tem certeza que deseja limpar todos os registros? Esta ação não pode ser desfeita."
-          );
+      // Upload de XML
+      // Modificar a parte do botão dropdown de exportação
+      document.getElementById("exportDropdown").innerHTML = `
+    <button id="exportBtn" class="bg-secondary text-white px-4 py-2 !rounded-button flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+        <div class="w-5 h-5 flex items-center justify-center">
+            <i class="ri-download-line"></i>
+        </div>
+        <span>Exportar</span>
+        <div class="w-5 h-5 flex items-center justify-center">
+            <i class="ri-arrow-down-s-line"></i>
+        </div>
+    </button>
+    <div id="exportMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10 hidden">
+        <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100" data-format="csv">
+            <div class="flex items-center space-x-2">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-file-text-line"></i>
+                </div>
+                <span>Exportar como CSV</span>
+            </div>
+        </button>
+        <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100" data-format="excel">
+            <div class="flex items-center space-x-2">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-file-excel-line"></i>
+                </div>
+                <span>Exportar como Excel</span>
+            </div>
+        </button>
+        <button class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100" data-format="pdf">
+            <div class="flex items-center space-x-2">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-file-pdf-line"></i>
+                </div>
+                <span>Exportar como PDF</span>
+            </div>
+        </button>
+    </div>
+`;
 
-          $("#btnConfirmar")
-            .off()
-            .on("click", function () {
-              db.clear();
-              $("#confirmacaoModal").modal("hide");
+      // Modificar o botão de upload de XML
+      document.getElementById("uploadXMLBtn").outerHTML = `
+    <div class="relative">
+        <input type="file" id="xmlFileInput" accept=".xml" class="absolute inset-0 opacity-0 w-full cursor-pointer" />
+        <button id="uploadXMLBtn" class="bg-secondary text-white px-4 py-2 !rounded-button flex items-center space-x-2 whitespace-nowrap cursor-pointer">
+            <div class="w-5 h-5 flex items-center justify-center">
+                <i class="ri-upload-line"></i>
+            </div>
+            <span>Upload XML</span>
+        </button>
+    </div>
+`;
 
-              // Recarregar a tabela com arrays vazios
-              carregarTabela([]);
-            });
+      // Adicionar um modal para feedback de importação XML
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `
+    <div id="xmlImportModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Importação de XML</h3>
+                <button id="closeXmlModalBtn" class="text-gray-500 hover:text-gray-700">
+                    <div class="w-6 h-6 flex items-center justify-center">
+                        <i class="ri-close-line text-xl"></i>
+                    </div>
+                </button>
+            </div>
+            <div class="p-6">
+                <div id="xmlImportStatus" class="mb-4"></div>
+                <div id="xmlImportProgress" class="hidden">
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 mb-4">
+                        <div id="progressBar" class="bg-primary h-2.5 rounded-full" style="width: 0%"></div>
+                    </div>
+                    <p id="progressText" class="text-sm text-gray-600">Processando...</p>
+                </div>
+                <div id="xmlImportResults" class="hidden space-y-2">
+                    <div id="importedCount" class="flex items-center space-x-2">
+                        <div class="w-5 h-5 flex items-center justify-center text-green-500">
+                            <i class="ri-check-line"></i>
+                        </div>
+                        <span class="text-sm text-gray-700">0 vendas importadas com sucesso.</span>
+                    </div>
+                    <div id="updatedCount" class="flex items-center space-x-2">
+                        <div class="w-5 h-5 flex items-center justify-center text-blue-500">
+                            <i class="ri-refresh-line"></i>
+                        </div>
+                        <span class="text-sm text-gray-700">0 vendas atualizadas.</span>
+                    </div>
+                    <div id="errorCount" class="flex items-center space-x-2">
+                        <div class="w-5 h-5 flex items-center justify-center text-red-500">
+                            <i class="ri-error-warning-line"></i>
+                        </div>
+                        <span class="text-sm text-gray-700">0 erros encontrados.</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end">
+                <button id="doneXmlBtn" class="bg-primary text-white px-4 py-2 !rounded-button">Concluído</button>
+            </div>
+        </div>
+    </div>
+`
+      );
 
-          $("#confirmacaoModal").modal("show");
+      // Adicionar eventos para menu de exportação
+      document.getElementById("exportBtn").addEventListener("click", (e) => {
+        e.stopPropagation();
+        const menu = document.getElementById("exportMenu");
+        menu.classList.toggle("hidden");
+      });
+
+      // Fechar o menu ao clicar fora dele
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest("#exportDropdown")) {
+          document.getElementById("exportMenu").classList.add("hidden");
+        }
+      });
+
+      // Funções de exportação
+      document.querySelectorAll("#exportMenu button").forEach((button) => {
+        button.addEventListener("click", () => {
+          const format = button.getAttribute("data-format");
+          exportData(format);
+          document.getElementById("exportMenu").classList.add("hidden");
+        });
+      });
+
+      // Função para exportação de dados
+      function exportData(format) {
+        // Preparar os dados para exportação
+        const dataToExport = salesData.map((sale) => ({
+          ID: sale.id,
+          Produto: sale.product,
+          "Valor Unitário": sale.unitPrice,
+          Quantidade: sale.quantity,
+          Total: sale.total,
+          Cliente: sale.customer,
+          "Nota Fiscal": sale.invoice,
+          Data: sale.formattedDate,
+        }));
+
+        switch (format) {
+          case "csv":
+            exportCSV(dataToExport);
+            break;
+          case "excel":
+            exportExcel(dataToExport);
+            break;
+          case "pdf":
+            exportPDF(dataToExport);
+            break;
+        }
+      }
+
+      // Exportar como CSV
+      function exportCSV(data) {
+        // Obter headers (nomes das colunas)
+        const headers = Object.keys(data[0]);
+
+        // Criar conteúdo CSV
+        let csvContent = headers.join(";") + "\n";
+
+        // Adicionar linhas
+        data.forEach((row) => {
+          const values = headers.map((header) => {
+            const value = row[header];
+            // Formatar valores numéricos com vírgula (padrão brasileiro)
+            if (typeof value === "number") {
+              return value.toString().replace(".", ",");
+            }
+            // Escapar aspas duplas e envolver em aspas se contiver ponto-e-vírgula
+            const cellValue = String(value).replace(/"/g, '""');
+            return cellValue.includes(";") ? `"${cellValue}"` : cellValue;
+          });
+          csvContent += values.join(";") + "\n";
         });
 
-        // Exportar para Excel
-        $("#btnExportar").click(function () {
-          if (dadosFiltrados.length === 0) {
-            alert("Não há dados para exportar.");
-            return;
-          }
+        // Criar blob e link para download
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `vendas_${getFormattedDate()}.csv`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
-          const ws = XLSX.utils.json_to_sheet(
-            dadosFiltrados.map((item) => {
-              const valorTotal =
-                parseFloat(item.valorUnitario) * parseInt(item.quantidade);
-              return {
-                "ID Produto": item.idProduto,
-                "Nome do Prato": item.nomePrato,
-                "Valor Unitário": parseFloat(item.valorUnitario),
-                Quantidade: parseInt(item.quantidade),
-                "Valor Total": valorTotal,
-                Cliente: item.cliente,
-                "Número NF": item.numeroNF,
-                "Data Emissão": formatarData(item.dataEmissao),
-              };
-            })
-          );
+      // Exportar como Excel (na verdade é CSV com extensão .xlsx)
+      function exportExcel(data) {
+        // Obter headers (nomes das colunas)
+        const headers = Object.keys(data[0]);
 
-          const wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, "Vendas");
+        // Criar conteúdo CSV
+        let csvContent = headers.join("\t") + "\n";
 
-          const fileName = `Dashboard_Vendas_${
-            new Date().toISOString().split("T")[0]
-          }.xlsx`;
-          XLSX.writeFile(wb, fileName);
+        // Adicionar linhas
+        data.forEach((row) => {
+          const values = headers.map((header) => {
+            const value = row[header];
+            // Formatar valores com padrão brasileiro
+            if (typeof value === "number") {
+              return value.toString().replace(".", ",");
+            }
+            return String(value);
+          });
+          csvContent += values.join("\t") + "\n";
         });
 
-        // Pesquisa
-        $("#barraPesquisa").on("input", function () {
-          termoPesquisa = $(this).val().trim();
-
-          if (termoPesquisa.length > 0) {
-            $("#limparPesquisa").show();
-          } else {
-            $("#limparPesquisa").hide();
-          }
-
-          aplicarFiltros();
+        // Criar blob e link para download
+        const blob = new Blob([csvContent], {
+          type: "application/vnd.ms-excel",
         });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `vendas_${getFormattedDate()}.xlsx`);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
 
-        $("#limparPesquisa").click(function () {
-          $("#barraPesquisa").val("");
-          termoPesquisa = "";
-          $(this).hide();
-          aplicarFiltros();
-        });
-
-        // Filtros
-        $("#filtroAno, #filtroMes, #filtroCliente, #filtroProduto").change(
-          function () {
-            aplicarFiltros();
-          }
+      // Exportar como PDF (simulação básica)
+      function exportPDF(data) {
+        alert(
+          "Para exportação real em PDF, seria necessário incluir uma biblioteca como jsPDF ou pdfmake. Esta é uma simulação da funcionalidade."
         );
 
-        // Carrega dados iniciais
-        carregarTabela();
+        // Em um ambiente real, usaríamos código como este:
+        /*
+    import { jsPDF } from "jspdf";
+    import "jspdf-autotable";
+    
+    const doc = new jsPDF();
+    
+    // Adicionar título
+    doc.text("Relatório de Vendas", 14, 16);
+    
+    // Definir colunas e linhas para a tabela
+    const tableColumn = Object.keys(data[0]);
+    const tableRows = data.map(item => Object.values(item));
+    
+    // Adicionar tabela
+    doc.autoTable({
+        head: [tableColumn],
+        body: tableRows,
+        startY: 20,
+    });
+    
+    // Salvar PDF
+    doc.save(`vendas_${getFormattedDate()}.pdf`);
+    */
+      }
 
-        // Esconde o loading após carregar
-        setTimeout(function () {
-          $(".loading").fadeOut();
-        }, 500);
-
-        // Adiciona dados de exemplo se o banco de dados estiver vazio
-
-        if (db.getAll().length === 0) {
-          const dadosExemplo = 
-          [
-            {
-              idProduto: "95",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "13",
-              cliente: "VFY",
-              numeroNF: "1713",
-              dataEmissao: "2025-01-06",
-            },
-            {
-              idProduto: "93",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "4",
-              cliente: "VFY",
-              numeroNF: "1713",
-              dataEmissao: "2025-01-06",
-            },
-            {
-              idProduto: "98",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "VFY",
-              numeroNF: "1713",
-              dataEmissao: "2025-01-06",
-            },
-            {
-              idProduto: "94",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "48",
-              cliente: "VFY",
-              numeroNF: "1713",
-              dataEmissao: "2025-01-06",
-            },
-            {
-              idProduto: "96",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "VFY",
-              numeroNF: "1713",
-              dataEmissao: "2025-01-06",
-            },
-            {
-              idProduto: "97",
-              nomePrato:
-                "Picadinho De Carne Com Arroz Branco, Couve E Farofa De Cebola Torradinha",
-              valorUnitario: "20.99",
-              quantidade: "20",
-              cliente: "VFY",
-              numeroNF: "1713",
-              dataEmissao: "2025-01-06",
-            },
-            {
-              idProduto: "92",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "27.5",
-              quantidade: "15",
-              cliente: "REDE D'OR",
-              numeroNF: "1714",
-              dataEmissao: "2025-01-09",
-            },
-            {
-              idProduto: "91",
-              nomePrato:
-                "Polenta Ao Molho De Cogumelos Com Brócolis Salteados No Alho, Azeite E Ervas",
-              valorUnitario: "24.99",
-              quantidade: "10",
-              cliente: "REDE D'OR",
-              numeroNF: "1714",
-              dataEmissao: "2025-01-09",
-            },
-            {
-              idProduto: "89",
-              nomePrato: "Brigadeiro De Colher",
-              valorUnitario: "11.88",
-              quantidade: "10",
-              cliente: "REDE D'OR",
-              numeroNF: "1714",
-              dataEmissao: "2025-01-09",
-            },
-            {
-              idProduto: "90",
-              nomePrato: "Cocadinha Cremosa",
-              valorUnitario: "11.88",
-              quantidade: "10",
-              cliente: "REDE D'OR",
-              numeroNF: "1714",
-              dataEmissao: "2025-01-09",
-            },
-            {
-              idProduto: "95",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "19",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "93",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "11",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "98",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "14",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "94",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "48",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "96",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "10",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "124",
-              nomePrato:
-                "Bobó Vegano De Cogumelos Com Quinoa, Arroz Integral E Mix De Castanhas",
-              valorUnitario: "17.98",
-              quantidade: "7",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "97",
-              nomePrato:
-                "Picadinho De Carne Com Arroz Branco, Couve E Farofa De Cebola Torradinha",
-              valorUnitario: "20.99",
-              quantidade: "18",
-              cliente: "VFY",
-              numeroNF: "1720",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "87",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "205",
-              cliente: "NUTRICAR",
-              numeroNF: "1721",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "88",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "245",
-              cliente: "NUTRICAR",
-              numeroNF: "1721",
-              dataEmissao: "2025-01-21",
-            },
-            {
-              idProduto: "63",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "25.02",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "62",
-              nomePrato:
-                "Escondidinho Vegetariano Com Purê De Mandioquinha E Requeijão",
-              valorUnitario: "25.11",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "68",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "26.91",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "61",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "26.91",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "64",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "23.4",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "60",
-              nomePrato:
-                "Bobó Vegano De Cogumelos Com Quinoa, Arroz Integral E Mix De Castanhas",
-              valorUnitario: "25.02",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "67",
-              nomePrato:
-                "Picadinho De Carne Com Arroz Branco, Couve E Farofa De Cebola Torradinha",
-              valorUnitario: "26.01",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "65",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "25.11",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "66",
-              nomePrato:
-                "Lasanha De Legumes Com Pesto De Manjericão E Molho De Tomates",
-              valorUnitario: "25.11",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "69",
-              nomePrato:
-                "Ragú De Linguicinha Toscana Com Arroz, Feijão Preto E Escarola",
-              valorUnitario: "23.4",
-              quantidade: "2",
-              cliente: "FABIO PAROLIM",
-              numeroNF: "1735",
-              dataEmissao: "2025-01-28",
-            },
-            {
-              idProduto: "70",
-              nomePrato:
-                "Aparecidinho De Carne Com Purê De Batatas E Requeijão Cremoso",
-              valorUnitario: "23.3",
-              quantidade: "4",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "71",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "23.3",
-              quantidade: "37",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "72",
-              nomePrato:
-                "Bobó Vegano De Cogumelos Com Quinoa, Arroz Integral E Mix De Castanhas",
-              valorUnitario: "23.3",
-              quantidade: "4",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "73",
-              nomePrato: "Brigadeiro De Colher",
-              valorUnitario: "11.88",
-              quantidade: "38",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "74",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "23.3",
-              quantidade: "12",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "75",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "22.4",
-              quantidade: "13",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "76",
-              nomePrato: "Cocadinha Cremosa",
-              valorUnitario: "11.88",
-              quantidade: "39",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "78",
-              nomePrato:
-                "Escondidinho Vegetariano Com Purê De Mandioquinha E Requeijão",
-              valorUnitario: "23.3",
-              quantidade: "1",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "77",
-              nomePrato:
-                "Escondidinho de Carne com Purê de Batatas e Requeijão Cremoso",
-              valorUnitario: "23.3",
-              quantidade: "5",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "79",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "23.3",
-              quantidade: "37",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "80",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "22.4",
-              quantidade: "6",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "81",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "22.4",
-              quantidade: "1",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "82",
-              nomePrato:
-                "Lasanha De Legumes Com Pesto De Manjericão E Molho De Tomates",
-              valorUnitario: "23.3",
-              quantidade: "8",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "83",
-              nomePrato: "Mousse De Brownie De Chocolate",
-              valorUnitario: "11.88",
-              quantidade: "45",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "84",
-              nomePrato:
-                "Picadinho De Carne Com Arroz Branco, Couve E Farofa De Cebola Torradinha",
-              valorUnitario: "23.3",
-              quantidade: "18",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "85",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "23.3",
-              quantidade: "17",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "86",
-              nomePrato:
-                "Ragú De Linguicinha Toscana Com Arroz, Feijão Preto E Escarola",
-              valorUnitario: "22.4",
-              quantidade: "2",
-              cliente: "MATER. STAR",
-              numeroNF: "N78",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "54",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "29.9",
-              quantidade: "1",
-              cliente: "ESPAÇO ROJO",
-              numeroNF: "N79",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "55",
-              nomePrato: "Cocadinha Cremosa",
-              valorUnitario: "11.6",
-              quantidade: "1",
-              cliente: "ESPAÇO ROJO",
-              numeroNF: "N79",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "56",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "32.6",
-              quantidade: "1",
-              cliente: "ESPAÇO ROJO",
-              numeroNF: "N79",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "57",
-              nomePrato: "Mousse De Brownie De Chocolate",
-              valorUnitario: "11.6",
-              quantidade: "1",
-              cliente: "ESPAÇO ROJO",
-              numeroNF: "N79",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "58",
-              nomePrato:
-                "Picadinho De Carne Com Arroz Branco, Couve E Farofa De Cebola Torradinha",
-              valorUnitario: "29.9",
-              quantidade: "1",
-              cliente: "ESPAÇO ROJO",
-              numeroNF: "N79",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "59",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "32.6",
-              quantidade: "1",
-              cliente: "ESPAÇO ROJO",
-              numeroNF: "N79",
-              dataEmissao: "2025-01-31",
-            },
-            {
-              idProduto: "95",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "19",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "93",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "11",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "98",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "14",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "94",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "48",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "96",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "10",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "124",
-              nomePrato:
-                "Bobó Vegano De Cogumelos Com Quinoa, Arroz Integral E Mix De Castanhas",
-              valorUnitario: "17.98",
-              quantidade: "8",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "97",
-              nomePrato:
-                "Picadinho De Carne Com Arroz Branco, Couve E Farofa De Cebola Torradinha",
-              valorUnitario: "20.99",
-              quantidade: "18",
-              cliente: "VFY",
-              numeroNF: "1768",
-              dataEmissao: "2025-02-05",
-            },
-            {
-              idProduto: "95",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "10",
-              cliente: "VFY",
-              numeroNF: "1774",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "93",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "10",
-              cliente: "VFY",
-              numeroNF: "1774",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "123",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "20",
-              cliente: "VFY",
-              numeroNF: "1774",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "98",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "10",
-              cliente: "VFY",
-              numeroNF: "1774",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "94",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "20",
-              cliente: "VFY",
-              numeroNF: "1774",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "124",
-              nomePrato:
-                "Bobó Vegano De Cogumelos Com Quinoa, Arroz Integral E Mix De Castanhas",
-              valorUnitario: "17.98",
-              quantidade: "10",
-              cliente: "VFY",
-              numeroNF: "1774",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "87",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "79",
-              cliente: "NUTRICAR",
-              numeroNF: "1775",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "88",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "70",
-              cliente: "NUTRICAR",
-              numeroNF: "1775",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1776",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "50",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1777",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1778",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "50",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1779",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1780",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "4",
-              cliente: "BDM",
-              numeroNF: "1781",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "50",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "18.8",
-              quantidade: "6",
-              cliente: "BDM",
-              numeroNF: "1784",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "50",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1785",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "50",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1786",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "48",
-              nomePrato: "Frango Bio Ao Pizzaiolo Com Arroz À Grega",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "45",
-              nomePrato: "Baião De Dois",
-              valorUnitario: "19.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "49",
-              nomePrato: "Frango Com Arroz, Feijão Carioca E Abobrinha",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "47",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "51",
-              nomePrato: "Kibe De Carne Com Arroz, Lentilha E Espinafre",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "46",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "52",
-              nomePrato:
-                "Moqueca De Saint Peter Com Arroz De Açafrão E Farinha De Mandioca",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "53",
-              nomePrato:
-                "Polpetas De Carne Da Mama Helô Recheadas De Mussarela Com Arroz Biro Biro E Batata Palha",
-              valorUnitario: "20.99",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "50",
-              nomePrato:
-                "Kibe De Abóbora Com Coalhada E Nozes, Arroz Cateto Com Cúrcuma E Lentilha",
-              valorUnitario: "18.8",
-              quantidade: "5",
-              cliente: "BDM",
-              numeroNF: "1787",
-              dataEmissao: "2025-02-06",
-            },
-            {
-              idProduto: "87",
-              nomePrato: "Carne Moída Com Arroz, Feijão Preto E Purê De Batata",
-              valorUnitario: "18.8",
-              quantidade: "67",
-              cliente: "NUTRICAR",
-              numeroNF: "1797",
-              dataEmissao: "2025-02-12",
-            },
-            {
-              idProduto: "88",
-              nomePrato:
-                "Capeletti De Mussarela Da Vó Mafalda Com Molho Caseiro De Tomate E Creme De Parmesão",
-              valorUnitario: "20.99",
-              quantidade: "94",
-              cliente: "NUTRICAR",
-              numeroNF: "1797",
-              dataEmissao: "2025-02-12",
-            },
-          ]
-          dadosExemplo.forEach((item) => db.add(item));
-          carregarTabela();
-        }
-      
-        // Limpa o modal quando é fechado
-        $("#cadastroModal").on("hidden.bs.modal", function () {
-          limparFormulario();
-          $("#cadastroModalLabel").text("Novo Registro");
+      // Funcionalidade de upload e processamento de XML
+      document
+        .getElementById("xmlFileInput")
+        .addEventListener("change", (e) => {
+          const file = e.target.files[0];
+          if (file && file.type === "text/xml") {
+            processXMLFile(file);
+          } else {
+            alert("Por favor, selecione um arquivo XML válido.");
+          }
+          // Limpar input para permitir selecionar o mesmo arquivo novamente
+          e.target.value = "";
         });
 
-        // Adicionar evento de refresh da página para garantir que os gráficos sejam atualizados
+      // Função para processar arquivo XML
+      function processXMLFile(file) {
+        // Mostrar modal de status
+        const xmlImportModal = document.getElementById("xmlImportModal");
+        const xmlImportStatus = document.getElementById("xmlImportStatus");
+        const xmlImportProgress = document.getElementById("xmlImportProgress");
+        const progressBar = document.getElementById("progressBar");
+        const progressText = document.getElementById("progressText");
+        const xmlImportResults = document.getElementById("xmlImportResults");
 
-        $(window).on("beforeunload", function () {
-          // Força a sincronização dos dados antes de fechar
-          try {
-            const db = new Database();
-            const currentData = db.getAll();
-            localStorage.setItem(db.backupKey, JSON.stringify(currentData));
+        xmlImportModal.classList.remove("hidden");
+        xmlImportModal.classList.add("flex");
+        xmlImportStatus.innerHTML = `<p class="text-center">Processando arquivo: ${file.name}</p>`;
+        xmlImportProgress.classList.remove("hidden");
+        xmlImportResults.classList.add("hidden");
 
-            // Garantir que os gráficos sejam destruídos antes de recarregar
-            if (donutChart) {
-              donutChart.destroy();
+        // Criar FileReader para ler o conteúdo do arquivo
+        const reader = new FileReader();
+        reader.onload = function (event) {
+          const xmlContent = event.target.result;
+
+          // Simulação de progresso
+          let progress = 0;
+          const interval = setInterval(() => {
+            progress += 10;
+            progressBar.style.width = `${progress}%`;
+            progressText.textContent = `Processando... ${progress}%`;
+
+            if (progress >= 100) {
+              clearInterval(interval);
+              setTimeout(() => {
+                // Processar o XML (simulação)
+                parseXML(xmlContent);
+              }, 500);
             }
-            if (lineChart) {
-              lineChart.destroy();
-            }
-          } catch (error) {
-            console.error("Erro ao sincronizar dados antes de sair:", error);
-          }
+          }, 300);
+        };
+
+        reader.readAsText(file);
+      }
+
+      // Função para analisar o XML e extrair dados (simulação)
+      function parseXML(xmlContent) {
+        // Em um ambiente real, usaríamos o DOMParser para analisar o conteúdo XML
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
+
+        // Simulação de dados extraídos
+        // Normalmente, você faria algo como:
+        // const vendas = xmlDoc.getElementsByTagName('venda');
+
+        // Simulação de resultados
+        const importedCount = Math.floor(Math.random() * 5) + 3; // 3-7 novas vendas
+        const updatedCount = Math.floor(Math.random() * 3); // 0-2 atualizações
+        const errorCount = Math.floor(Math.random() * 2); // 0-1 erros
+
+        // Gerar vendas simuladas a partir do "XML"
+        const simulatedSales = [];
+        for (let i = 0; i < importedCount; i++) {
+          const id = Math.max(0, ...salesData.map((s) => s.id)) + 1 + i;
+          const product = [
+            "Café Especial",
+            "Açúcar Refinado",
+            "Farinha de Trigo",
+            "Leite Integral",
+            "Queijo Mussarela",
+          ][Math.floor(Math.random() * 5)];
+          const unitPrice = parseFloat((Math.random() * 50 + 5).toFixed(2));
+          const quantity = Math.floor(Math.random() * 20) + 1;
+          const total = unitPrice * quantity;
+          const customer = [
+            "Mercado Central",
+            "Restaurante Bom Sabor",
+            "Padaria Delícia",
+            "Supermercado Mais",
+            "Lanchonete Express",
+          ][Math.floor(Math.random() * 5)];
+          const invoice = `NF-${Math.floor(Math.random() * 90000) + 10000}`;
+          const today = new Date();
+          const date = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate() - Math.floor(Math.random() * 30)
+          )
+            .toISOString()
+            .split("T")[0];
+          const dateObj = new Date(date);
+          const formattedDate = `${String(dateObj.getDate()).padStart(
+            2,
+            "0"
+          )}/${String(dateObj.getMonth() + 1).padStart(
+            2,
+            "0"
+          )}/${dateObj.getFullYear()}`;
+
+          simulatedSales.push({
+            id,
+            product,
+            unitPrice,
+            quantity,
+            total,
+            customer,
+            invoice,
+            date,
+            formattedDate,
+          });
+        }
+
+        // Adicionar vendas simuladas aos dados
+        salesData.unshift(...simulatedSales);
+
+        // Mostrar resultados
+        document.getElementById("xmlImportProgress").classList.add("hidden");
+        document.getElementById("xmlImportResults").classList.remove("hidden");
+        document
+          .getElementById("importedCount")
+          .querySelector(
+            "span"
+          ).textContent = `${importedCount} vendas importadas com sucesso.`;
+        document
+          .getElementById("updatedCount")
+          .querySelector(
+            "span"
+          ).textContent = `${updatedCount} vendas atualizadas.`;
+        document
+          .getElementById("errorCount")
+          .querySelector(
+            "span"
+          ).textContent = `${errorCount} erros encontrados.`;
+
+        // Atualizar a interface
+        updateSalesTable();
+        updateCharts();
+      }
+
+      // Eventos para o modal de importação XML
+      document
+        .getElementById("closeXmlModalBtn")
+        .addEventListener("click", () => {
+          document.getElementById("xmlImportModal").classList.add("hidden");
+          document.getElementById("xmlImportModal").classList.remove("flex");
+        });
+
+      document.getElementById("doneXmlBtn").addEventListener("click", () => {
+        document.getElementById("xmlImportModal").classList.add("hidden");
+        document.getElementById("xmlImportModal").classList.remove("flex");
+      });
+
+      // Função auxiliar para obter data formatada para nomes de arquivo
+      function getFormattedDate() {
+        const now = new Date();
+        return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(
+          2,
+          "0"
+        )}${String(now.getDate()).padStart(2, "0")}_${String(
+          now.getHours()
+        ).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
+      }
+
+      // Inicializar aplicação
+      window.addEventListener("load", () => {
+        updateSalesTable();
+        initCharts();
+
+        // Ajustar gráficos quando a janela for redimensionada
+        window.addEventListener("resize", () => {
+          Object.values(charts).forEach((chart) => {
+            chart.resize();
+          });
         });
       });
     </script>
